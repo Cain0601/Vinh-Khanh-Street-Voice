@@ -1,0 +1,64 @@
+# Visual Studio / .NET
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+publish/
+out/
+
+# Rider
+.idea/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# NuGet
+*.nupkg
+project.lock.json
+packages/
+
+# Node
+node_modules/
+web/node_modules/
+web/.next/
+web/.turbo/
+dist/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.production
+
+# Firebase / local config
+.firebase/
+src/FoodTour.Api/appsettings.Firebase.json
+
+# Test / coverage
+coverage/
+TestResults/
+*.coverage
+
+# Misc
+*.tmp
+*.cache
+*.bak

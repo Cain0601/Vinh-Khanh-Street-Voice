@@ -1,0 +1,6 @@
+{
+  "Firebase": {
+    "ProjectId": "your-firebase-project-id",
+    "StorageBucket": "your-storage-bucket"
+  }
+}

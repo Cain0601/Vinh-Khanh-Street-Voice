@@ -1,21 +1,67 @@
 using FoodTour.Api.Middleware;
+using FoodTour.Api.Repositories;
+using FoodTour.Api.Services;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// ─────────────────── Services ───────────────────
+
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
-// Register Firestore service and repositories
-builder.Services.AddSingleton<FoodTour.Api.Services.FirestoreService>();
-builder.Services.AddScoped<FoodTour.Api.Repositories.PoiRepository>();
-builder.Services.AddScoped<FoodTour.Api.Repositories.CategoryRepository>();
-builder.Services.AddScoped<FoodTour.Api.Services.DatabaseInitializerService>();
-// CORS - allow local frontend during development
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
+
+// Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Firebase Admin SDK initialization
+if (FirebaseApp.DefaultInstance == null)
+{
+    try
+    {
+        FirebaseApp.Create(new AppOptions
+        {
+            Credential = GoogleCredential.GetApplicationDefault()
+        });
+    }
+    catch
+    {
+        Console.WriteLine("⚠️  Firebase Admin SDK not initialized — set GOOGLE_APPLICATION_CREDENTIALS env var.");
+    }
+}
+
+// Firestore
+builder.Services.AddSingleton<FirestoreService>();
+
+// Repositories
+builder.Services.AddScoped<PoiRepository>();
+builder.Services.AddScoped<CategoryRepository>();
+builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<ReviewRepository>();
+builder.Services.AddScoped<BookmarkRepository>();
+builder.Services.AddScoped<MenuItemRepository>();
+builder.Services.AddScoped<AnalyticsRepository>();
+builder.Services.AddScoped<AuditRepository>();
+builder.Services.AddScoped<ModerationRepository>();
+
+// Database initializer
+builder.Services.AddScoped<DatabaseInitializerService>();
+
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowLocalDev", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "https://vinhkhanh-foodtour.web.app")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -24,54 +70,41 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Initialize database with default data (only if INIT_DB env var is set)
+// ─────────────────── Pipeline ───────────────────
+
+// 1. Global exception handler (outermost — catches everything)
+app.UseGlobalExceptionHandler();
+
+// 2. CORS
+app.UseCors("AllowLocalDev");
+
+// 3. Firebase auth middleware (before routing/controllers)
+app.UseFirebaseAuth();
+
+// 4. Routing + Controllers
+app.UseRouting();
+app.MapControllers();
+
+// 5. Swagger (all environments for convenience)
+app.MapOpenApi();
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VinhKhanh Food Tour API v1");
+    c.RoutePrefix = "swagger";
+});
+
+// 6. Health check
+app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTime.UtcNow }));
+
+// ─────────────────── DB Init ───────────────────
+
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("INIT_DB")))
 {
     Console.WriteLine("🚀 Database initialization requested...");
-    using (var scope = app.Services.CreateScope())
-    {
-        var initializer = scope.ServiceProvider.GetRequiredService<FoodTour.Api.Services.DatabaseInitializerService>();
-        await initializer.InitializeAsync();
-    }
+    using var scope = app.Services.CreateScope();
+    var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializerService>();
+    await initializer.InitializeAsync();
 }
-
-// Configure the HTTP request pipeline.
-// Enable OpenAPI/Swagger in all environments for Day-1 convenience.
-app.MapOpenApi();
-
-// Enable CORS for mapped endpoints
-app.UseCors("AllowLocalDev");
-
-// Map attribute controllers
-app.MapControllers();
-
-// Register Firebase auth middleware (stub - implement verification in middleware).
-app.UseFirebaseAuth();
-
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

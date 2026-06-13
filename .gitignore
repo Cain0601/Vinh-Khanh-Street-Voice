@@ -62,3 +62,6 @@ TestResults/
 *.tmp
 *.cache
 *.bak
+
+.agents/
+skills-lock.json

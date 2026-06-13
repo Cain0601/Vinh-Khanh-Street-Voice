@@ -1,6 +1,7 @@
-'use client'
+ 'use client'
 
 import { useState } from 'react'
+import { Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface HeroSectionProps {
@@ -38,7 +39,7 @@ export default function HeroSection({ defaultQuery = 'phở ăm thức Vĩnh Kh�
             type="submit"
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500 transition-colors"
           >
-            🔍
+            <Search className="h-5 w-5" />
           </button>
         </form>
       </div>

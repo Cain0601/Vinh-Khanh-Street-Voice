@@ -1,6 +1,7 @@
-'use client'
+ 'use client'
 
 import Link from 'next/link'
+import { Map } from 'lucide-react'
 
 export default function MapPreviewCard() {
   return (
@@ -8,7 +9,7 @@ export default function MapPreviewCard() {
       <div className="rounded-lg overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-emerald-500 transition-all">
         {/* Map Preview Image/Placeholder */}
         <div className="relative h-40 md:h-64 bg-slate-700 flex items-center justify-center overflow-hidden">
-          <div className="text-5xl md:text-7xl opacity-50">🗺️</div>
+          <Map className="h-20 w-20 md:h-28 md:w-28 opacity-50" />
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-700/30 to-transparent group-hover:from-emerald-500/10 group-hover:via-emerald-500/20 group-hover:to-emerald-500/10 transition-all" />
         </div>
 

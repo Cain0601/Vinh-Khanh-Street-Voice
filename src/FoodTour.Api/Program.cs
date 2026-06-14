@@ -3,6 +3,7 @@ using FoodTour.Api.Repositories;
 using FoodTour.Api.Services;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,10 +59,15 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowLocalDev", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "https://vinhkhanh-foodtour.web.app")
+        // Load allowed origins from environment variable (comma‑separated).
+        // Fallback to localhost URLs if variable is not set.
+        var origins = (builder.Configuration["ALLOWED_ORIGINS"] ?? "http://localhost:3000,http://localhost:3001")
+            .Split(',', System.StringSplitOptions.RemoveEmptyEntries)
+            .Select(o => o.Trim())
+            .Append("https://vinh-khanh-street-voice.onrender.com")
+            .ToArray();
+
+        policy.WithOrigins(origins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

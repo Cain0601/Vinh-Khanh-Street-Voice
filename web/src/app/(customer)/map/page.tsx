@@ -140,7 +140,7 @@ function MapPageContent() {
       ) : (
         <div className="flex-1 relative bg-slate-800">
           <div className="absolute inset-0">
-            <MapView restaurants={mockRestaurants} />
+            <MapView userPos={null} pois={[]} onTriggerAudio={() => {}} onMapClick={() => {}} />
           </div>
           <div className="relative z-10 p-4">
             <div className="text-white">

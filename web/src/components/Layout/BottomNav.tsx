@@ -1,15 +1,16 @@
-'use client'
+ 'use client'
 
-import { useState } from 'react'
+import { useState, type ElementType } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/cn'
 import QRScanner from '@/components/QR/QRScanner'
+import { Home as HomeIcon, MapPin as MapIcon, Bell as BellIcon, User as UserIcon, QrCode as QrCodeIcon } from 'lucide-react'
 
 interface NavItem {
   label: string
   href: string
-  icon: string
+  icon: ElementType
   activePattern?: RegExp
 }
 
@@ -17,25 +18,25 @@ const navItems: NavItem[] = [
   {
     label: 'Home',
     href: '/home',
-    icon: '🏠',
+    icon: HomeIcon,
     activePattern: /^\/home\/?$/,
   },
   {
     label: 'Map',
     href: '/map',
-    icon: '🗺️',
+    icon: MapIcon,
     activePattern: /^\/map/,
   },
   {
     label: 'Notifications',
     href: '/notifications',
-    icon: '🔔',
+    icon: BellIcon,
     activePattern: /^\/notifications/,
   },
   {
     label: 'Profile',
     href: '/profile',
-    icon: '👤',
+    icon: UserIcon,
     activePattern: /^\/profile/,
   },
 ]
@@ -73,7 +74,7 @@ export default function BottomNav() {
                   : 'text-slate-400 hover:text-white'
               )}
             >
-              <span className="text-xl">{item.icon}</span>
+              <span className="text-xl"><item.icon className="h-6 w-6" /></span>
               <span className="truncate text-xs">{item.label}</span>
             </Link>
           ))}
@@ -84,7 +85,7 @@ export default function BottomNav() {
           onClick={() => setQrOpen(true)}
           className="flex-shrink-0 w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center -mt-8 border-4 border-slate-800 text-2xl font-bold"
         >
-          QR
+          <QrCodeIcon className="h-6 w-6" />
         </button>
 
         {/* Right Items */}
@@ -100,7 +101,7 @@ export default function BottomNav() {
                   : 'text-slate-400 hover:text-white'
               )}
             >
-              <span className="text-xl">{item.icon}</span>
+              <span className="text-xl"><item.icon className="h-6 w-6" /></span>
               <span className="truncate text-xs">{item.label}</span>
             </Link>
           ))}

@@ -119,7 +119,7 @@ function MapPageContent() {
             type="submit"
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500 transition-colors"
           >
-            🔍
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </button>
         </form>
       </div>
@@ -140,7 +140,7 @@ function MapPageContent() {
       ) : (
         <div className="flex-1 relative bg-slate-800">
           <div className="absolute inset-0">
-            <MapView restaurants={mockRestaurants} />
+            <MapView userPos={null} pois={[]} onTriggerAudio={() => {}} onMapClick={() => {}} />
           </div>
           <div className="relative z-10 p-4">
             <div className="text-white">

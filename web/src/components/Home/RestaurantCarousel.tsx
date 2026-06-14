@@ -1,8 +1,9 @@
-'use client'
+ 'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/cn'
+import { Heart, Star, MapPin } from 'lucide-react'
 
 interface RestaurantCarouselProps {
   restaurants: Array<{
@@ -58,13 +59,13 @@ export default function RestaurantCarousel({ restaurants }: RestaurantCarouselPr
                   <button
                     onClick={(e) => toggleBookmark(e, restaurant.id)}
                     className={cn(
-                      'absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all text-lg',
+                      'absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all',
                       bookmarks.has(restaurant.id)
                         ? 'bg-emerald-500 text-white'
                         : 'bg-slate-900/50 text-slate-300 hover:bg-slate-900/80'
                     )}
                   >
-                    {bookmarks.has(restaurant.id) ? '❤️' : '🤍'}
+                    <Heart className={cn('h-4 w-4', bookmarks.has(restaurant.id) ? 'text-white' : 'text-slate-300')} />
                   </button>
                 </div>
 
@@ -75,8 +76,12 @@ export default function RestaurantCarousel({ restaurants }: RestaurantCarouselPr
                   </h3>
                   <p className="text-xs md:text-sm text-slate-400 mb-2">{restaurant.category}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs md:text-sm text-slate-300">⭐ {restaurant.rating}</span>
-                    <span className="text-xs md:text-sm text-slate-400">📍 {restaurant.distance} km</span>
+                    <span className="text-xs md:text-sm text-slate-300 flex items-center">
+                      <Star className="h-4 w-4 text-amber-400 mr-1 inline-block" /> {restaurant.rating}
+                    </span>
+                    <span className="text-xs md:text-sm text-slate-400 flex items-center">
+                      <MapPin className="h-4 w-4 text-emerald-400 mr-1 inline-block" /> {restaurant.distance} km
+                    </span>
                   </div>
                 </div>
               </div>

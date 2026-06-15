@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic'
 import Header from '@/components/Layout/Header'
 import MapFilters from '@/components/Map/MapFilters'
 import RestaurantList from '@/components/Map/RestaurantList'
+import PoiAudioDrawer from '@/components/Map/PoiAudioDrawer'
+import { usePoiAudioQueue } from '@/hooks/usePoiAudioQueue'
 
 const MapView = dynamic(() => import('@/components/Map/MapView'), { ssr: false, loading: () => <div className="h-80 bg-slate-800" /> })
 
@@ -79,6 +81,8 @@ function MapPageContent() {
   const [activeFilter, setActiveFilter] = useState('all')
   const [showList, setShowList] = useState(!!initialSearch)
 
+  const { currentPoi, queue, currentIndex, isPlaying, audioRef, enqueue, skip, play, pause, clearQueue } = usePoiAudioQueue();
+
   // Filter restaurants based on search and category
   const filteredRestaurants = useMemo(() => {
     return mockRestaurants.filter((restaurant) => {
@@ -100,12 +104,12 @@ function MapPageContent() {
   }
 
   return (
-    <div className="h-[86vh] flex flex-col relative bg-slate-900">
+    <div className="h-[calc(100vh-80px)] flex flex-col relative bg-slate-900">
       {/* Header */}
-      <Header title="Bản đồ" showBack onBack={() => router.back()} />
+      <Header title="Bản đồ" showBack onBack={() => router.push("/home")} />
 
       {/* Search Input */}
-      <div className="bg-slate-800 border-b border-slate-700 px-4 py-3">
+      {/* <div className="bg-slate-800 border-b border-slate-700 px-4 py-3">
         <form onSubmit={handleSearch} className="relative">
           <input
             type="text"
@@ -122,10 +126,10 @@ function MapPageContent() {
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </button>
         </form>
-      </div>
+      </div> */}
 
       {/* Filters */}
-      {!showList && <MapFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />}
+      {/* {!showList && <MapFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />} */}
 
       {/* Map or List View */}
       {showList ? (
@@ -140,8 +144,21 @@ function MapPageContent() {
       ) : (
         <div className="flex-1 relative bg-slate-800">
           <div className="absolute inset-0">
-            <MapView userPos={null} pois={[]} onTriggerAudio={() => {}} onMapClick={() => {}} />
+            <MapView userPos={null} pois={[]} onTriggerAudio={enqueue} onMapClick={() => {}} />
           </div>
+          
+          <PoiAudioDrawer 
+            isOpen={queue.length > 0} 
+            onClose={clearQueue} 
+            currentPoi={currentPoi} 
+            queuePois={queue} 
+            currentIndex={currentIndex}
+            isPlaying={isPlaying} 
+            onSkip={skip} 
+            onPlay={play} 
+            onPause={pause} 
+            audioRef={audioRef}
+          />
           <div className="relative z-10 p-4">
             <div className="text-white">
               <h2 className="text-xl font-bold">Bản đồ Vĩnh Khánh</h2>

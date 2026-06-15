@@ -18,7 +18,7 @@ const filters = [
 
 export default function MapFilters({ activeFilter, onFilterChange }: MapFiltersProps) {
   return (
-    <div className="w-full px-4 py-3 border-b border-slate-700 bg-slate-800/50">
+    <div className="w-full px-4 py-3">
       <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 snap-x snap-mandatory no-scrollbar">
         {filters.map((filter) => (
           <button

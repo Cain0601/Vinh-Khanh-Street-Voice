@@ -7,7 +7,7 @@ import SafeArea from '@/components/Layout/SafeArea'
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   return (
     <MobileContainer>
-      <SafeArea className=" overflow-y-auto">
+      <SafeArea className="overflow-y-auto">
         {children}
       </SafeArea>
       <BottomNav />

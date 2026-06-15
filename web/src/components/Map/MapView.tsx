@@ -6,6 +6,32 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Navigation, MousePointer2 } from 'lucide-react';
 import { getPois } from '@/lib/api'
+import { useSearchParams } from 'next/navigation';
+import MapFilters from './MapFilters';
+
+// Haversine formula to calculate distance between two lat/lng points in meters
+function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // Radius of the earth in m
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+  const d = R * c; // Distance in m
+  return d;
+}
+
+// Helper to extract localized string if object is returned
+function getString(value: any, lang: 'vi' | 'en' = 'vi'): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    return value[lang] || value['en'] || Object.values(value)[0] as string || '';
+  }
+  return String(value);
+}
 
 // Fix for default marker icons in Leaflet with Next.js
 const DefaultIcon = L.icon({
@@ -68,7 +94,7 @@ function MapTracker({ pos }: { pos: [number, number] | null }) {
   return null;
 }
 
-interface POI {
+export interface POI {
   id: string;
   lat: number;
   lng: number;
@@ -92,13 +118,19 @@ interface TourMapProps {
 }
 
 export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, onMapClick }: TourMapProps) {
-  const lastTriggeredIdRef = useRef<string | null>(null);
-  const currentNearbyIdRef = useRef<string | null>(null);
+  const currentNearbyIdsRef = useRef<Set<string>>(new Set());
   const watchIdRef = useRef<number | null>(null);
   const [trackingMode, setTrackingMode] = useState<'auto' | 'manual'>('auto');
   const [internalUserPos, setInternalUserPos] = useState<[number, number] | null>(userPos ?? null);
   const [pois, setPois] = useState<POI[]>(initialPois ?? []);
   const [loading, setLoading] = useState(false);
+
+  
+    const searchParams = useSearchParams()
+    const initialSearch = searchParams.get('search') || ''
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
+  const [activeFilter, setActiveFilter] = useState('all')
+  const [showList, setShowList] = useState(!!initialSearch)
 
   // keep internal user pos in sync with parent-provided userPos
   useEffect(() => {
@@ -125,12 +157,12 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
           rating: p.rating ?? 0,
           distance: p.distance ?? 0,
           translation: {
-            name: p.title ?? p.name ?? p.translation?.name ?? 'POI',
-            description: p.summary ?? p.description ?? p.translation?.description ?? '',
-            specialties: p.specialties ?? '',
-            priceRange: p.priceRange ?? '',
-            audioUrl: p.audioUrl ?? p.translation?.audioUrl,
-            imageUrl: p.imageUrl ?? p.translation?.imageUrl,
+            name: getString(p.title ?? p.name ?? p.translation?.name ?? 'POI'),
+            description: getString(p.summary ?? p.description ?? p.translation?.description ?? ''),
+            specialties: getString(p.specialties ?? ''),
+            priceRange: getString(p.priceRange ?? ''),
+            audioUrl: getString(p.audioUrl ?? p.translation?.audioUrl),
+            imageUrl: getString(p.imageUrl ?? p.translation?.imageUrl),
           }
         }))
         setPois(transformed)
@@ -144,22 +176,21 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
 
   useEffect(() => {
     if (internalUserPos && pois.length > 0) {
-      // Find the first POI within 25m range
-      const nearbyPoi = pois.find(p => p.distance <= 25);
+      // Find all POIs within 25m range dynamically
+      const nearbyPois = pois.map(p => ({
+        ...p,
+        distance: getDistanceFromLatLonInMeters(internalUserPos[0], internalUserPos[1], p.lat, p.lng)
+      })).filter(p => p.distance <= 25);
 
-      if (nearbyPoi) {
-        if (nearbyPoi.id !== lastTriggeredIdRef.current) {
-          lastTriggeredIdRef.current = nearbyPoi.id;
-          currentNearbyIdRef.current = nearbyPoi.id;
-          // onTriggerAudio(nearbyPoi);
+      const newNearbyIds = new Set(nearbyPois.map(p => p.id));
+
+      nearbyPois.forEach(nearbyPoi => {
+        if (!currentNearbyIdsRef.current.has(nearbyPoi.id)) {
+          onTriggerAudio(nearbyPoi);
         }
-      } else {
-        // When completely out of range of any 25m POI, reset session-level consecutive trigger
-        // This allows re-triggering the same POI if they leave and come back, 
-        // regardless of whether they hit other POIs in between.
-        lastTriggeredIdRef.current = null;
-        currentNearbyIdRef.current = null;
-      }
+      });
+
+      currentNearbyIdsRef.current = newNearbyIds;
     }
   }, [internalUserPos, pois, onTriggerAudio]);
 
@@ -215,9 +246,35 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
     };
   }, [trackingMode]);
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    // setShowList(true)
+  }
   return (
     <div className="w-full h-full rounded-lg overflow-hidden">
-      <header className="absolute top-0 left-0 right-0 z-50 p-4 pointer-events-none">
+      <header className="absolute top-0 left-0 right-0 z-50 p-4">
+        {/* Search Input */}
+              {/* <div className="bg-slate-800 border-b border-slate-700 px-4 py-3"> */}
+                <form onSubmit={handleSearch} className="relative">
+                  <input
+                    type="text"
+                    placeholder="Tìm quán ăn gần đây..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    // onFocus={() => setShowList(true)}
+                    className="w-full px-4 py-3 rounded-lg bg-slate-700 text-white placeholder-slate-500 border border-slate-600 focus:border-emerald-500 focus:outline-none text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500 transition-colors"
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  </button>
+                </form>
+              {/* </div> */}
+        
+              {/* Filters */}
+              {!showList && <MapFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />}
         <div className="flex items-center justify-end pointer-events-auto">
           <button
             onClick={() => setTrackingMode(prev => prev === 'auto' ? 'manual' : 'auto')}

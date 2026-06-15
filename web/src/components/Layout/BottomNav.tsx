@@ -60,7 +60,7 @@ export default function BottomNav() {
     <>
       <QRScanner isOpen={qrOpen} onClose={() => setQrOpen(false)} />
       
-      <nav className="fixed bottom-0 left-0 right-0 max-w-lg bg-slate-800 border-t border-slate-700 flex justify-between items-center max-w-mobile mx-auto px-2 py-2 gap-1">
+      <nav className="h-[60px] fixed bottom-0 left-0 right-0 max-w-lg bg-slate-800 border-t border-slate-700 flex justify-between items-center max-w-mobile mx-auto px-2 py-2 gap-1">
         {/* Left Items */}
         <div className="flex-1 flex justify-around">
           {leftItems.map((item) => (

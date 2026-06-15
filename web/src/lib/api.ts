@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5190'
 
@@ -24,55 +24,59 @@ instance.interceptors.request.use((config) => {
       const token = ft ? decodeURIComponent(ft.split('=')[1]) : t ? decodeURIComponent(t.split('=')[1]) : undefined
       if (token && config.headers) config.headers['Authorization'] = `Bearer ${token}`
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
   return config
 })
 
-async function wrap<T = any>(p: Promise<any>): Promise<ApiResponse<T>> {
+async function wrap<T = unknown>(p: Promise<AxiosResponse<unknown>>): Promise<ApiResponse<T>> {
   try {
     const res = await p
     const payload = res?.data
     if (payload && typeof payload === 'object' && ('success' in payload || 'data' in payload)) {
+      const response = payload as Partial<ApiResponse<T>>
       return {
-        success: !!payload.success,
-        message: payload.message ?? null,
-        data: payload.data ?? null
+        success: !!response.success,
+        message: response.message ?? null,
+        data: response.data ?? null
       }
     }
-    return { success: true, message: null, data: payload }
-  } catch (err: any) {
-    const message = err?.response?.data?.message ?? err?.message ?? 'Unknown error'
-    const data = err?.response?.data ?? null
-    return { success: false, message, data }
+    return { success: true, message: null, data: payload as T }
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { message?: string } }; message?: string }
+    const message = error.response?.data?.message ?? error.message ?? 'Unknown error'
+    return { success: false, message, data: null }
   }
 }
 
+export const api = {
+  instance,
+  get: <T = unknown>(url: string, config?: AxiosRequestConfig) => wrap<T>(instance.get(url, config)),
+  post: <T = unknown>(url: string, body?: unknown, config?: AxiosRequestConfig) => wrap<T>(instance.post(url, body, config)),
+  put: <T = unknown>(url: string, body?: unknown, config?: AxiosRequestConfig) => wrap<T>(instance.put(url, body, config)),
+  patch: <T = unknown>(url: string, body?: unknown, config?: AxiosRequestConfig) => wrap<T>(instance.patch(url, body, config)),
+  del: <T = unknown>(url: string, config?: AxiosRequestConfig) => wrap<T>(instance.delete(url, config)),
+}
+
 export async function getCategories() {
-  return wrap<any[]>(instance.get('/api/categories'))
+  return wrap<unknown[]>(instance.get('/api/categories'))
 }
 
 export async function getPois() {
-  return wrap<any[]>(instance.get('/api/pois'))
+  return wrap<unknown[]>(instance.get('/api/pois'))
 }
 
 export async function getPoi(id: string) {
-  return wrap<any>(instance.get(`/api/pois/${id}`))
+  return wrap<unknown>(instance.get(`/api/pois/${id}`))
 }
 
 export async function getBookmarks() {
-  return wrap<any[]>(instance.get('/api/bookmarks'))
+  return wrap<unknown[]>(instance.get('/api/bookmarks'))
 }
 
 export async function toggleBookmark(poiId: string) {
   return wrap(instance.post('/api/bookmarks', { poiId }))
 }
 
-export default {
-  instance,
-  get: <T = any>(url: string, config?: AxiosRequestConfig) => wrap<T>(instance.get(url, config)),
-  post: <T = any>(url: string, body?: any, config?: AxiosRequestConfig) => wrap<T>(instance.post(url, body, config)),
-  put: <T = any>(url: string, body?: any, config?: AxiosRequestConfig) => wrap<T>(instance.put(url, body, config)),
-  del: <T = any>(url: string, config?: AxiosRequestConfig) => wrap<T>(instance.delete(url, config)),
-}
+export default api

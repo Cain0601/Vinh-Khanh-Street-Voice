@@ -63,12 +63,14 @@ export async function getCategories() {
   return wrap<unknown[]>(instance.get('/api/categories'))
 }
 
-export async function getPois() {
-  return wrap<unknown[]>(instance.get('/api/pois'))
+export async function getPois(lang?: string) {
+  const query = lang ? `?lang=${lang}` : ''
+  return wrap<unknown[]>(instance.get(`/api/pois${query}`))
 }
 
-export async function getPoi(id: string) {
-  return wrap<unknown>(instance.get(`/api/pois/${id}`))
+export async function getPoi(id: string, lang?: string) {
+  const query = lang ? `?lang=${lang}` : ''
+  return wrap<unknown>(instance.get(`/api/pois/${id}${query}`))
 }
 
 export async function getBookmarks() {

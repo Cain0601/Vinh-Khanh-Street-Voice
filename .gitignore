@@ -52,6 +52,8 @@ Thumbs.db
 # Firebase / local config
 .firebase/
 src/FoodTour.Api/appsettings.Firebase.json
+src/FoodTour.Api/appsettings.Development.json
+src/FoodTour.Api/appsettings.json
 
 # Test / coverage
 coverage/
@@ -65,3 +67,5 @@ TestResults/
 
 .agents/
 skills-lock.json
+
+piper_tts/

@@ -81,7 +81,7 @@ function MapPageContent() {
   const [activeFilter, setActiveFilter] = useState('all')
   const [showList, setShowList] = useState(!!initialSearch)
 
-  const { currentPoi, queue, currentIndex, isPlaying, audioRef, enqueue, skip, play, pause, clearQueue } = usePoiAudioQueue();
+  const { currentPoi, queue, currentIndex, isPlaying, audioRef, currentTime, duration, enqueue, skip, play, pause, clearQueue } = usePoiAudioQueue();
 
   // Filter restaurants based on search and category
   const filteredRestaurants = useMemo(() => {
@@ -104,32 +104,9 @@ function MapPageContent() {
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] flex flex-col relative bg-slate-900">
+    <div className="h-[calc(100dvh-80px)] flex flex-col relative bg-slate-900">
       {/* Header */}
       <Header title="Bản đồ" showBack onBack={() => router.push("/home")} />
-
-      {/* Search Input */}
-      {/* <div className="bg-slate-800 border-b border-slate-700 px-4 py-3">
-        <form onSubmit={handleSearch} className="relative">
-          <input
-            type="text"
-            placeholder="Tìm quán ăn gần đây..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setShowList(true)}
-            className="w-full px-4 py-3 rounded-lg bg-slate-700 text-white placeholder-slate-500 border border-slate-600 focus:border-emerald-500 focus:outline-none text-sm"
-          />
-          <button
-            type="submit"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500 transition-colors"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </button>
-        </form>
-      </div> */}
-
-      {/* Filters */}
-      {/* {!showList && <MapFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />} */}
 
       {/* Map or List View */}
       {showList ? (
@@ -157,7 +134,9 @@ function MapPageContent() {
             onSkip={skip} 
             onPlay={play} 
             onPause={pause} 
-            audioRef={audioRef}
+            audioRef={audioRef as React.RefObject<HTMLAudioElement>}
+            currentTime={currentTime}
+            duration={duration}
           />
           <div className="relative z-10 p-4">
             <div className="text-white">

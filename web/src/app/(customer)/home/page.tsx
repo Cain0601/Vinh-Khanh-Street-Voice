@@ -52,7 +52,7 @@ const mockRestaurants = [
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col pb-28">
+    <div className="flex flex-col pb-28 px-4">
       <Header />
 
       <main className="w-full max-w-5xl mx-auto">

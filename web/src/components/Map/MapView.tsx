@@ -792,7 +792,7 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
   }
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden">
+    <div className="w-full h-full overflow-hidden">
       <header className="absolute top-0 left-0 right-0 z-20 p-4">
         <form onSubmit={handleSearch} className="relative">
           <input

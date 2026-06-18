@@ -19,7 +19,7 @@ export default function Header({
   action,
 }: HeaderProps) {
   return (
-    <div className={cn('flex items-center justify-between py-4 px-4 sticky top-0 right-0 w-full z-40 bg-background', className)}>
+    <div className={cn('flex items-center justify-between p-4 sticky top-0 right-0 w-full z-40 bg-background', className)}>
       <div className="flex items-center gap-3 flex-1">
         {showBack ? (
           <button

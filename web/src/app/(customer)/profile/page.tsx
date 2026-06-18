@@ -169,7 +169,7 @@ export default function SettingsPage() {
       {/* Header */}
       <Header title="Hồ sơ" showBack onBack={() => router.push("/home")} />
 
-      <div className="p-6 space-y-8 pb-24 h-[calc(100vh-100px)] overflow-y-auto">
+      <div className="p-4 space-y-8 pb-24 h-[calc(100vh-100px)] overflow-y-auto">
         {/* USER INFO Card */}
         <div className="bg-secondary border border-zinc-800 rounded-3xl p-5">
           <div className="flex items-start justify-between gap-4">

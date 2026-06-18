@@ -104,9 +104,9 @@ function MapPageContent() {
   }
 
   return (
-    <div className="h-[calc(100dvh-80px)] flex flex-col relative bg-slate-900">
+    <div className="h-[calc(100dvh-60px)] flex flex-col relative bg-slate-900">
       {/* Header */}
-      <Header title="Bản đồ" showBack onBack={() => router.push("/home")} />
+      {/* <Header title="Bản đồ" showBack onBack={() => router.push("/home")} /> */}
 
       {/* Map or List View */}
       {showList ? (

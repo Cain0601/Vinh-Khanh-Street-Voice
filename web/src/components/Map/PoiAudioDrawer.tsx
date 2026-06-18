@@ -131,7 +131,7 @@ export default function PoiAudioDrawer({
 
   // Render Expanded Full-screen Mode
   return (
-    <div className="absolute rounded-xl inset-1 z-30 bg-slate-900 flex flex-col transition-all duration-300 transform translate-y-0">
+    <div className="absolute rounded-xl inset-1 z-20 bg-slate-900 flex flex-col transition-all duration-300 transform translate-y-0">
       {/* Header */}
       <div className="flex items-center justify-between p-4 pt-6">
         <button 

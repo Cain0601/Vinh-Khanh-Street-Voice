@@ -14,16 +14,16 @@ namespace FoodTour.Api.Models
 
         // Multi-language fields
         [FirestoreProperty("title")]
-        public Dictionary<string, string>? Title { get; set; }
+        public string? Title { get; set; }
 
         [FirestoreProperty("summary")]
-        public Dictionary<string, string>? Summary { get; set; }
+        public string? Summary { get; set; }
 
         [FirestoreProperty("description")]
         public Dictionary<string, string>? Description { get; set; }
 
-        [FirestoreProperty("audioUrls")]
-        public Dictionary<string, string>? AudioUrls { get; set; }
+        [FirestoreProperty("audioUrl")]
+        public string? AudioUrl { get; set; }
 
         [FirestoreProperty("categoryId")]
         public string? CategoryId { get; set; }

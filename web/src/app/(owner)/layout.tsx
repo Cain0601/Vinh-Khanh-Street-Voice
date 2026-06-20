@@ -1,7 +1,7 @@
 import '../globals.css'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
-import AuthGuard from '../components/AuthGuard'
+// import AuthGuard from '../components/AuthGuard'
 
 export const metadata = {
   title: 'FoodTour - Owner',
@@ -13,9 +13,9 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     <html lang="en">
       <body className="min-h-screen bg-white text-slate-900">
         <Header />
-        <AuthGuard allowedRoles={["OWNER", "ADMIN"]}>
+        {/* <AuthGuard allowedRoles={["OWNER", "ADMIN"]}> */}
           <main className="container py-8">{children}</main>
-        </AuthGuard>
+        {/* </AuthGuard> */}
         <Footer />
       </body>
     </html>

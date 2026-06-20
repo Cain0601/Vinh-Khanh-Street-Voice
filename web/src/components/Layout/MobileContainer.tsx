@@ -15,10 +15,10 @@ export default function MobileContainer({
   padding = true,
 }: MobileContainerProps) {
   return (
-    <div className="flex min-h-screen justify-center bg-slate-900 max-w-lg w-full mx-auto">
+    <div className="flex h-screen justify-center bg-slate-900 max-w-lg w-full mx-auto">
       <div
         className={cn(
-          'max-w-mobile flex flex-col bg-slate-900 text-white w-full relative',
+          'max-w-mobile flex flex-col bg-slate-900 text-white w-full relative h-screen',
           className
         )}
       >

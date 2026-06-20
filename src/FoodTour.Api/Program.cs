@@ -9,6 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ─────────────────── Services ───────────────────
 
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<TranslationService>();
+builder.Services.AddSingleton<PiperTtsService>();
+builder.Services.AddSingleton<CloudinaryService>();
+
 builder.Services.AddOpenApi();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -61,7 +66,7 @@ builder.Services.AddCors(options =>
     {
         // Load allowed origins from environment variable (comma‑separated).
         // Fallback to localhost URLs if variable is not set.
-        var origins = (builder.Configuration["ALLOWED_ORIGINS"] ?? "http://localhost:3000,http://localhost:3001")
+        var origins = (builder.Configuration["ALLOWED_ORIGINS"] ?? "http://localhost:3000,http://localhost:3001,http://192.168.1.121")
             .Split(',', System.StringSplitOptions.RemoveEmptyEntries)
             .Select(o => o.Trim())
             .Append("https://vinh-khanh-street-voice.onrender.com")

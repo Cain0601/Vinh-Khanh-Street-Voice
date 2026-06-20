@@ -37,7 +37,7 @@ export default function AdminPoisPage() {
         getPois(),
         getCategories()
       ])
-      if (poisRes.success) setPois(Array.isArray(poisRes.data) ? poisRes.data : [])
+      if (poisRes.success) setPois(Array.isArray(poisRes.data) ? poisRes.data as Poi[] : [])
       if (catRes.success) setCategories(Array.isArray(catRes.data) ? catRes.data : [])
       setLoading(false)
     }

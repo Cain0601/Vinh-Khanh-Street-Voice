@@ -10,7 +10,7 @@ interface SafeAreaProps {
 
 export default function SafeArea({ children, className }: SafeAreaProps) {
   return (
-    <div className={cn('px-4', className)}>
+    <div className={cn('', className)}>
       {children}
     </div>
   )

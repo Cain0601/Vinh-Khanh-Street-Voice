@@ -38,7 +38,7 @@ export default function AdminCategoriesPage() {
   async function load() {
     setLoading(true)
     const res = await getCategories()
-    if (res.success) setCategories(Array.isArray(res.data) ? res.data : [])
+    if (res.success) setCategories(Array.isArray(res.data) ? (res.data as Category[]) : [])
     setLoading(false)
   }
 

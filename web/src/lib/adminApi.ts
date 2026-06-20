@@ -69,3 +69,28 @@ export async function getTopPois() {
 export async function getHeatmapData() {
   return api.get<any>("/admin/analytics/heatmap");
 }
+
+// ─── Admin POIs ───
+export async function getAdminPois() {
+  return api.get<any>("/admin/pois");
+}
+
+export async function getAdminPoi(id: string) {
+  return api.get<any>(`/admin/pois/${id}`);
+}
+
+export async function createAdminPoi(data: any) {
+  return api.post<any>("/admin/pois", data);
+}
+
+export async function updateAdminPoi(id: string, data: any) {
+  return api.put<any>(`/admin/pois/${id}`, data);
+}
+
+export async function updatePoiStatus(id: string, status: string) {
+  return api.put<any>(`/admin/pois/${id}/status`, { status });
+}
+
+export async function deleteAdminPoi(id: string) {
+  return api.del<any>(`/admin/pois/${id}`);
+}

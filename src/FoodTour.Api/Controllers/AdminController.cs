@@ -419,6 +419,136 @@ namespace FoodTour.Api.Controllers
             var events = await _analyticsRepo.GetByTypeAsync("LOCATION", limit: 500);
             return Ok(ApiResponse.Ok(events));
         }
+        // ──────────────────── POI MANAGEMENT (ADMIN) ────────────────────
+
+        /// <summary>
+        /// List all POIs (unfiltered — admin sees all statuses)
+        /// </summary>
+        [HttpGet("pois")]
+        public async Task<IActionResult> GetAllPois()
+        {
+            var pois = await _poiRepo.GetAllUnfilteredAsync();
+            return Ok(ApiResponse.Ok(new { items = pois, total = pois.Count }));
+        }
+
+        /// <summary>
+        /// Get a specific POI by ID (admin)
+        /// </summary>
+        [HttpGet("pois/{id}")]
+        public async Task<IActionResult> GetPoi(string id)
+        {
+            var poi = await _poiRepo.GetByIdAsync(id);
+            if (poi == null)
+                return NotFound(ApiResponse.Fail("POI not found"));
+            return Ok(ApiResponse.Ok(poi));
+        }
+
+        /// <summary>
+        /// Create a new POI (admin — auto-approved)
+        /// </summary>
+        [HttpPost("pois")]
+        public async Task<IActionResult> CreatePoi([FromBody] Poi poi)
+        {
+            poi.Status = "approved"; // Admin-created POIs are auto-approved
+            poi.IsActive = true;
+            if (string.IsNullOrEmpty(poi.OwnerId))
+                poi.OwnerId = GetAdminId(); // Admin is the owner if not specified
+
+            var created = await _poiRepo.AddAsync(poi);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                AdminId = GetAdminId(),
+                Action = "CREATE_POI",
+                TargetId = created.Id,
+                NewValue = JsonSerializer.Serialize(new { title = poi.Title, address = poi.Address }),
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                UserAgent = HttpContext.Request.Headers["User-Agent"].FirstOrDefault()
+            });
+
+            return CreatedAtAction(nameof(GetPoi), new { id = created.Id }, ApiResponse.Ok(created, "POI created"));
+        }
+
+        /// <summary>
+        /// Update a POI (admin)
+        /// </summary>
+        [HttpPut("pois/{id}")]
+        public async Task<IActionResult> UpdatePoi(string id, [FromBody] Poi poi)
+        {
+            var existing = await _poiRepo.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound(ApiResponse.Fail("POI not found"));
+
+            poi.Id = id;
+            // Preserve original owner if not specified
+            if (string.IsNullOrEmpty(poi.OwnerId))
+                poi.OwnerId = existing.OwnerId;
+                
+            var updated = await _poiRepo.UpdateAsync(id, poi);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                AdminId = GetAdminId(),
+                Action = "UPDATE_POI",
+                TargetId = id,
+                NewValue = JsonSerializer.Serialize(new { title = poi.Title, status = poi.Status }),
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                UserAgent = HttpContext.Request.Headers["User-Agent"].FirstOrDefault()
+            });
+
+            return Ok(ApiResponse.Ok(updated, "POI updated"));
+        }
+
+        /// <summary>
+        /// Update POI status (admin approve/reject)
+        /// </summary>
+        [HttpPut("pois/{id}/status")]
+        public async Task<IActionResult> UpdatePoiStatus(string id, [FromBody] ChangePoiStatusRequest request)
+        {
+            var poi = await _poiRepo.GetByIdAsync(id);
+            if (poi == null)
+                return NotFound(ApiResponse.Fail("POI not found"));
+
+            var oldStatus = poi.Status;
+            await _poiRepo.UpdateFieldsAsync(id, new Dictionary<string, object> { ["status"] = request.Status });
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                AdminId = GetAdminId(),
+                Action = "UPDATE_POI_STATUS",
+                TargetId = id,
+                OldValue = JsonSerializer.Serialize(new { status = oldStatus }),
+                NewValue = JsonSerializer.Serialize(new { status = request.Status }),
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                UserAgent = HttpContext.Request.Headers["User-Agent"].FirstOrDefault()
+            });
+
+            return Ok(ApiResponse.Ok($"POI status changed to {request.Status}"));
+        }
+
+        /// <summary>
+        /// Delete a POI (admin)
+        /// </summary>
+        [HttpDelete("pois/{id}")]
+        public async Task<IActionResult> DeletePoi(string id)
+        {
+            var poi = await _poiRepo.GetByIdAsync(id);
+            if (poi == null)
+                return NotFound(ApiResponse.Fail("POI not found"));
+
+            await _poiRepo.DeleteAsync(id);
+
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                AdminId = GetAdminId(),
+                Action = "DELETE_POI",
+                TargetId = id,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                UserAgent = HttpContext.Request.Headers["User-Agent"].FirstOrDefault()
+            });
+
+            return Ok(ApiResponse.Ok("POI deleted"));
+        }
     }
 
     // Request DTOs for Admin
@@ -435,5 +565,10 @@ namespace FoodTour.Api.Controllers
     public class RejectRequest
     {
         public string? Reason { get; set; }
+    }
+    
+    public class ChangePoiStatusRequest
+    {
+        public string Status { get; set; } = string.Empty;
     }
 }

@@ -81,7 +81,6 @@ export default function PoiAudioDrawer({
 
   const hasNext = currentIndex < queuePois.length - 1;
   const hasPrev = currentIndex > 0;
-  console.log('PoiAudioDrawer render', { currentPoi, queuePois, currentIndex, isPlaying, progress });
   // Render Compact Mini-player Mode
   if (!isExpanded) {
     return (

@@ -14,4 +14,12 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+
+# Tạo thư mục piper_tts và các thư mục con cần thiết
+RUN mkdir -p /app/piper_tts/models \
+    && mkdir -p /app/piper_tts/piper
+
+# (Tùy chọn) Copy piper_tts folder nếu bạn có trong source
+# COPY piper_tts /app/piper_tts/
+
 ENTRYPOINT ["dotnet", "FoodTour.Api.dll"]

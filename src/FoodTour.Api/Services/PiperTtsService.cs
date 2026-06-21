@@ -39,184 +39,6 @@ namespace FoodTour.Api.Services
             return audioData;
         }
 
-        // private async Task<PiperProvider?> GetProviderForLanguageAsync(string langCode)
-        // {
-        //     Console.WriteLine($"[PiperTTS] GetProviderForLanguageAsync called | langCode={langCode}");
-        //     // Normalize language code to model key
-        //     string modelKey = langCode.ToLower() switch
-        //     {
-        //         "vi" => "vi_VN-vivos-medium",
-        //         "vn" => "vi_VN-vivos-medium",
-        //         "en" => "en_US-lessac-medium",
-        //         "zh" => "zh_CN-huayan-medium",
-        //         "cn" => "zh_CN-huayan-medium",
-        //         "zh-cn" => "zh_CN-huayan-medium",
-        //         "ja" => "ja_JP-jvnv-medium",
-        //         "jp" => "ja_JP-jvnv-medium",
-        //         "fr" => "fr_FR-siwis-medium",
-        //         "es" => "es_ES-sharvard-medium",
-        //         _ => "en_US-lessac-medium" // Fallback to English
-        //     };
-        //     Console.WriteLine($"[PiperTTS] Resolved modelKey='{modelKey}' for langCode='{langCode}'.");
-
-        //     if (_providers.TryGetValue(modelKey, out var existingProvider))
-        //     {
-        //         Console.WriteLine("[PiperTTS] Provider found in cache.");
-        //         return existingProvider;
-        //     }
-
-        //     await _downloadLock.WaitAsync();
-        //     try
-        //     {
-        //         // Double check after lock
-        //         if (_providers.TryGetValue(modelKey, out var providerAfterLock))
-        //         {
-        //             Console.WriteLine("[PiperTTS] Provider found in cache after acquiring lock.");
-        //             return providerAfterLock;
-        //         }
-
-        //         // Determine base path for piper_tts. Prefer the folder alongside the project source if it exists.
-        //         var assemblyDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-        //         string cwd;
-        //         if (assemblyDir != null)
-        //         {
-        //             // Possible location three levels up from the bin output (project root location).
-        //             var fallbackPath = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "..", "piper_tts"));
-        //             var directPath = Path.Combine(assemblyDir, "piper_tts");
-        //             cwd = Directory.Exists(fallbackPath) ? fallbackPath : directPath;
-        //         }
-        //         else
-        //         {
-        //             cwd = Path.Combine(Directory.GetCurrentDirectory(), "piper_tts");
-        //         }
-        //         if (!Directory.Exists(cwd)) Directory.CreateDirectory(cwd);
-
-        //         // Ensure the process working directory matches the Piper base folder so that VoiceModel.LoadModelByKey
-        //         // can locate the model under the expected "models" sub‑directory.
-        //         Directory.SetCurrentDirectory(cwd);
-
-        //         if (!_piperDownloaded)
-        //         {
-        //             var piperDir = Path.Combine(cwd, "piper");
-        //             if (!Directory.Exists(piperDir))
-        //             {
-        //                 Console.WriteLine("[PiperTTS] Piper executable not found – downloading now.");
-        //                 var stream = await PiperDownloader.DownloadPiper();
-        //                 PiperDownloader.ExtractPiper(stream, cwd);
-        //                 Console.WriteLine("[PiperTTS] Piper executable downloaded and extracted.");
-        //             }
-        //             _piperDownloaded = true;
-        //         }
-
-        //         // Download model
-        //         // Use a dedicated 'models' subfolder under the piper_tts working directory.
-        //         var modelsRoot = Path.Combine(cwd, "models");
-        //         Directory.CreateDirectory(modelsRoot);
-        //         var expectedModelPath = Path.Combine(modelsRoot, modelKey);
-        //         Console.WriteLine($"[PiperTTS] Expected model folder: {expectedModelPath} | Exists? {Directory.Exists(expectedModelPath)}");
-        //         // Ensure a generic model.json exists for PiperSharp if missing
-        //         if (Directory.Exists(expectedModelPath) && !File.Exists(Path.Combine(expectedModelPath, "model.json")))
-        //         {
-        //             var onnxJson = Directory.GetFiles(expectedModelPath, "*.onnx.json").FirstOrDefault();
-        //             if (!string.IsNullOrEmpty(onnxJson))
-        //             {
-        //                 var modelJsonPath = Path.Combine(expectedModelPath, "model.json");
-        //                 File.Copy(onnxJson, modelJsonPath, overwrite: true);
-        //                 Console.WriteLine("[PiperTTS] model.json created from .onnx.json.");
-        //             }
-        //         }
-
-        //         var model = await VoiceModel.LoadModelByKey(modelKey);
-        //         if (model == null)
-        //         {
-        //             // If not found, maybe the model was placed under the "piper" sub‑folder (common mistake).
-        //             var fallbackPath = Path.Combine(cwd, "piper", modelKey);
-        //             if (Directory.Exists(fallbackPath))
-        //             {
-        //                 Console.WriteLine($"[PiperTTS] Model found in fallback location: {fallbackPath}. Adding to search path.");
-        //                 // Copy the fallback files into the proper models folder.
-        //                 var targetPath = expectedModelPath;
-        //                 Directory.CreateDirectory(targetPath);
-        //                 foreach (var file in Directory.GetFiles(fallbackPath))
-        //                 {
-        //                     var dest = Path.Combine(targetPath, Path.GetFileName(file));
-        //                     File.Copy(file, dest, overwrite: true);
-        //                 }
-        //                 // Ensure a generic model.json exists for PiperSharp (copy from *.onnx.json if present)
-        //                 var onnxJson = Directory.GetFiles(targetPath, "*.onnx.json").FirstOrDefault();
-        //                 if (!string.IsNullOrEmpty(onnxJson))
-        //                 {
-        //                     var modelJsonPath = Path.Combine(targetPath, "model.json");
-        //                     File.Copy(onnxJson, modelJsonPath, overwrite: true);
-        //                 }
-        //                 Console.WriteLine($"[PiperTTS] Model files copied to expected location.");
-        //                 model = await VoiceModel.LoadModelByKey(modelKey);
-        //             }
-        //             else
-        //             {
-        //                 Console.WriteLine($"[PiperTTS] Model '{modelKey}' not found locally – downloading.");
-        //                 await PiperDownloader.DownloadModelByKey(modelKey);
-        //                 // After download, the downloader places files under cwd/piper/models; move them to our modelsRoot.
-        //                 var downloadedPath = Path.Combine(cwd, "piper", "models", modelKey);
-        //                 if (Directory.Exists(downloadedPath))
-        //                 {
-        //                     Directory.CreateDirectory(expectedModelPath);
-        //                     foreach (var file in Directory.GetFiles(downloadedPath))
-        //                     {
-        //                         var dest = Path.Combine(expectedModelPath, Path.GetFileName(file));
-        //                         File.Copy(file, dest, overwrite: true);
-        //                     }
-        //                     // Also copy any *.onnx.json to a generic model.json for PiperSharp compatibility
-        //                     var onnxJson = Directory.GetFiles(expectedModelPath, "*.onnx.json").FirstOrDefault();
-        //                     if (!string.IsNullOrEmpty(onnxJson))
-        //                     {
-        //                         var modelJsonPath = Path.Combine(expectedModelPath, "model.json");
-        //                         File.Copy(onnxJson, modelJsonPath, overwrite: true);
-        //                     }
-        //                 }
-        //                 model = await VoiceModel.LoadModelByKey(modelKey);
-        //                 Console.WriteLine($"[PiperTTS] Model '{modelKey}' download completed.");
-        //             }
-        //         }
-
-        //         if (model != null)
-        //         {
-        //             // Log the files that actually exist in the model folder for debugging
-        //             try
-        //             {
-        //                 var files = Directory.GetFiles(expectedModelPath);
-        //                 Console.WriteLine($"[PiperTTS] Files in model folder ({expectedModelPath}): {string.Join(", ", files)}");
-        //             }
-        //             catch (Exception dirEx)
-        //             {
-        //                 Console.WriteLine($"[PiperTTS] Unable to list files in model folder: {dirEx.Message}");
-        //             }
-
-        //             var config = new PiperConfiguration()
-        //             {
-        //                 ExecutableLocation = Path.Combine(cwd, "piper", "piper.exe"),
-        //                 WorkingDirectory = cwd,
-        //                 Model = model
-        //             };
-
-        //             Console.WriteLine("[PiperTTS] Creating PiperProvider with loaded model.");
-        //             var provider = new PiperProvider(config);
-        //             _providers.TryAdd(modelKey, provider);
-        //             Console.WriteLine("[PiperTTS] Provider created and cached.");
-        //             return provider;
-        //         }
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         Console.WriteLine($"Error initializing Piper TTS for {langCode}: {ex.Message}");
-        //     }
-        //     finally
-        //     {
-        //         _downloadLock.Release();
-        //     }
-
-        //     return null;
-        // }
         private async Task<PiperProvider?> GetProviderForLanguageAsync(string langCode)
 {
     Console.WriteLine($"[PiperTTS] GetProviderForLanguageAsync called | langCode={langCode}");
@@ -229,6 +51,15 @@ namespace FoodTour.Api.Services
         "ja" or "jp" => "ja_JP-jvnv-medium",
         "fr" => "fr_FR-siwis-medium",
         "es" => "es_ES-sharvard-medium",
+        "hi" => "hi_IN-pratham-medium",
+        "ar" => "ar_JO-kareem-medium",
+        "pt" => "pt_BR-faber-medium",           // hoặc pt_PT nếu thích
+        "ru" => "ru_RU-irina-medium",
+        "id" => "id_ID-eka-medium",
+        "ko" => "ko_KR-kyeoni-medium",
+        "de" => "de_DE-eva_k-medium",
+        "it" => "it_IT-paola-medium",
+        "th" => "th_TH-ponpirun-medium",
         _ => "en_US-lessac-medium"
     };
 

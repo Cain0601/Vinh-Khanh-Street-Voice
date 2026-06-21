@@ -97,7 +97,7 @@ export default function SearchPage() {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition ${
+              className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition ${
                 selectedCategory === cat
                   ? 'bg-emerald-500 text-white'
                   : 'bg-slate-700 text-slate-300 hover:bg-slate-600'

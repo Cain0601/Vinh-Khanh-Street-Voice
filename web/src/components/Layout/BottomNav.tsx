@@ -6,8 +6,10 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/cn'
 import QRScanner from '@/components/QR/QRScanner'
 import { Home as HomeIcon, MapPin as MapIcon, Bell as BellIcon, User as UserIcon, QrCode as QrCodeIcon } from 'lucide-react'
+import { useTranslation } from '@/i18n'
 
 interface NavItem {
+  labelKey: string
   label: string
   href: string
   icon: ElementType
@@ -15,35 +17,16 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  {
-    label: 'Home',
-    href: '/home',
-    icon: HomeIcon,
-    activePattern: /^\/home\/?$/,
-  },
-  {
-    label: 'Map',
-    href: '/map',
-    icon: MapIcon,
-    activePattern: /^\/map/,
-  },
-  {
-    label: 'Notifications',
-    href: '/notifications',
-    icon: BellIcon,
-    activePattern: /^\/notifications/,
-  },
-  {
-    label: 'Profile',
-    href: '/profile',
-    icon: UserIcon,
-    activePattern: /^\/profile/,
-  },
+  { labelKey: 'home', label: 'Home', href: '/home', icon: HomeIcon, activePattern: /^\/home\/?$/ },
+  { labelKey: 'map', label: 'Map', href: '/map', icon: MapIcon, activePattern: /^\/map/ },
+  { labelKey: 'notifications', label: 'Notifications', href: '/notifications', icon: BellIcon, activePattern: /^\/notifications/ },
+  { labelKey: 'profile', label: 'Profile', href: '/profile', icon: UserIcon, activePattern: /^\/profile/ },
 ]
 
 export default function BottomNav() {
   const pathname = usePathname()
   const [qrOpen, setQrOpen] = useState(false)
+  const t = useTranslation();
 
   const isActive = (item: NavItem) => {
     if (item.activePattern) {
@@ -75,7 +58,7 @@ export default function BottomNav() {
               )}
             >
               <span className="text-xl"><item.icon className="h-6 w-6" /></span>
-              <span className="truncate text-xs">{item.label}</span>
+              <span className="truncate text-xs">{(t as any).nav?.[item.labelKey] ?? item.label}</span>
             </Link>
           ))}
         </div>
@@ -83,7 +66,7 @@ export default function BottomNav() {
         {/* Floating QR Button */}
         <button
           onClick={() => setQrOpen(true)}
-          className="flex-shrink-0 w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center -mt-8 border-4 border-slate-800 text-2xl font-bold"
+          className="shrink-0 w-14 h-14 rounded-full bg-linear-to-br from-emerald-400 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center -mt-8 border-4 border-slate-800 text-2xl font-bold"
         >
           <QrCodeIcon className="h-6 w-6" />
         </button>
@@ -102,7 +85,7 @@ export default function BottomNav() {
               )}
             >
               <span className="text-xl"><item.icon className="h-6 w-6" /></span>
-              <span className="truncate text-xs">{item.label}</span>
+              <span className="truncate text-xs">{(t as any).nav?.[item.labelKey] ?? item.label}</span>
             </Link>
           ))}
         </div>

@@ -109,5 +109,28 @@ const vi = {
     instruction: "Đặt mã QR vào giữa khung để quét",
     closeButton: "Đóng",
   },
+  auth: {
+    loginTitle: "Đăng nhập",
+    registerTitle: "Đăng ký",
+    displayNamePlaceholder: "Tên hiển thị",
+    emailPlaceholder: "Email",
+    passwordPlaceholder: "Mật khẩu",
+    loginButton: "Đăng nhập",
+    registerButton: "Đăng ký",
+    or: "Hoặc",
+    googleSignIn: "Tiếp tục với Google",
+    noAccount: "Chưa có tài khoản? Đăng ký",
+    haveAccount: "Đã có tài khoản? Đăng nhập",
+    loginSuccess: "Đăng nhập thành công",
+    registerSuccess: "Đăng ký thành công",
+    displayNameRequired: "Vui lòng nhập tên hiển thị",
+    genericError: "Có lỗi xảy ra, vui lòng thử lại",
+  },
+  onboarding: {
+    title: "Chào mừng bạn",
+    gpsPrompt: "Vui lòng cấp quyền vị trí để trải nghiệm tốt nhất.",
+    selectLanguage: "Chọn ngôn ngữ",
+    continue: "Tiếp tục",
+  },
 };
 export default vi;

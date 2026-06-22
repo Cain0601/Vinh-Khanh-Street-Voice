@@ -110,5 +110,28 @@ const zh = {
     instruction: "将二维码置于框中央进行扫描",
     closeButton: "关闭",
   },
+  auth: {
+    loginTitle: "Login",
+    registerTitle: "Register",
+    displayNamePlaceholder: "Display Name",
+    emailPlaceholder: "Email",
+    passwordPlaceholder: "Password",
+    loginButton: "Login",
+    registerButton: "Register",
+    or: "Or",
+    googleSignIn: "Continue with Google",
+    noAccount: "No account? Register",
+    haveAccount: "Have an account? Login",
+    loginSuccess: "Login successful",
+    registerSuccess: "Registration successful",
+    displayNameRequired: "Please enter a display name",
+    genericError: "An error occurred, please try again",
+  },
+  onboarding: {
+    title: "Welcome",
+    gpsPrompt: "Please grant location permission for the best experience.",
+    selectLanguage: "Select Language",
+    continue: "Continue",
+  },
 };
 export default zh;

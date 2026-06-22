@@ -23,17 +23,17 @@ const en = {
   },
   home: {
     hero: {
-      titlePrefix: "Bạn đang tìm",
-      subtitle: "Khám phá các quán ăn tuyệt vời",
-      searchPlaceholder: "Tìm kiếm quán ăn...",
+      titlePrefix: "Looking for",
+      subtitle: "Discover the best restaurants in Vĩnh Khánh.",
+      searchPlaceholder: "Search for restaurants, dishes, or cuisines...",
     },
     mapPreview: {
-      title: "Xem bản đồ địa điểm thực tương tác",
-      description: "Khám phá các quán ăn trên bản đồ Vĩnh Khánh",
-      openMap: "Mở bản đồ",
+      title: "Explore Vĩnh Khánh",
+      description: "Discover the best restaurants in Vĩnh Khánh.",
+      openMap: "Open Map",
     },
     restaurantCarousel: {
-      title: "Quán ăn gần bạn",
+      title: "Restaurants Near You",
     },
   },
   homePage: {
@@ -108,6 +108,29 @@ const en = {
     errorTitle: "Unable to open camera",
     instruction: "Position the QR code in the center of the frame to scan",
     closeButton: "Close",
+  },
+  auth: {
+    loginTitle: "Login",
+    registerTitle: "Register",
+    displayNamePlaceholder: "Display Name",
+    emailPlaceholder: "Email",
+    passwordPlaceholder: "Password",
+    loginButton: "Login",
+    registerButton: "Register",
+    or: "Or",
+    googleSignIn: "Continue with Google",
+    noAccount: "No account? Register",
+    haveAccount: "Have an account? Login",
+    loginSuccess: "Login successful",
+    registerSuccess: "Registration successful",
+    displayNameRequired: "Please enter a display name",
+    genericError: "An error occurred, please try again",
+  },
+  onboarding: {
+    title: "Welcome",
+    gpsPrompt: "Please grant location permission for the best experience.",
+    selectLanguage: "Select Language",
+    continue: "Continue",
   },
 };
 

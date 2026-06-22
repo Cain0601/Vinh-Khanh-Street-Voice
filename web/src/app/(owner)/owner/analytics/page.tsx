@@ -81,7 +81,8 @@ export default function Analytics() {
         api.get("/owners/analytics"),
         analyticsApi.getQrStats(),
       ]);
-      setData(analyticsRes?.data || data);
+      setData(((analyticsRes as any)?.data as AnalyticsResponse) || data);
+
       setQrStats(qrRes);
     } catch (error) {
       console.error("Failed to fetch analytics:", error);

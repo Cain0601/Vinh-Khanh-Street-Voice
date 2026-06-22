@@ -55,7 +55,9 @@ export default function MenuPage() {
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | "delete">("add");
+  const [modalMode, setModalMode] = useState<
+    "add" | "edit" | "view" | "delete"
+  >("add");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,12 +66,14 @@ export default function MenuPage() {
     try {
       setPoisLoading(true);
       const response = await api.get(
-        "/pois/owner/list?search=&status=all&page=1&limit=100"
+        "/pois/owner/list?search=&status=all&page=1&limit=100",
       );
-      const nextPois = ((response?.data as any)?.data || []).map((poi: any) => ({
-        id: poi.id,
-        name: poi.translations?.[0]?.name || "Unnamed POI",
-      }));
+      const nextPois = ((response?.data as any)?.data || []).map(
+        (poi: any) => ({
+          id: poi.id,
+          name: poi.translations?.[0]?.name || "Unnamed POI",
+        }),
+      );
       setPois(nextPois);
     } catch (e) {
       console.error(e);
@@ -82,11 +86,15 @@ export default function MenuPage() {
     try {
       setLoading(true);
       const response = await api.get(
-        `/menu-items/owner/list?search=${encodeURIComponent(searchQuery)}&page=${currentPage}&limit=12`
+        `/menu-items/owner/list?search=${encodeURIComponent(searchQuery)}&page=${currentPage}&limit=12`,
       );
       setMenuItems((response?.data as any)?.data || []);
       setPagination(
-        (response?.data as any)?.pagination || { total: 0, totalPages: 0, limit: 12 }
+        (response?.data as any)?.pagination || {
+          total: 0,
+          totalPages: 0,
+          limit: 12,
+        },
       );
     } catch (e) {
       console.error(e);
@@ -105,7 +113,7 @@ export default function MenuPage() {
 
   const handleOpenModal = (
     mode: "add" | "edit" | "view" | "delete",
-    item?: MenuItem
+    item?: MenuItem,
   ) => {
     setModalMode(mode);
     setSelectedItem(item || null);
@@ -175,7 +183,9 @@ export default function MenuPage() {
 
   const toggleAvailability = async (item: MenuItem) => {
     try {
-      await api.put(`/menu-items/${item.id}`, { isAvailable: !item.isAvailable });
+      await api.put(`/menu-items/${item.id}`, {
+        isAvailable: !item.isAvailable,
+      });
       fetchMenuItems();
     } catch (e) {
       console.error(e);
@@ -236,7 +246,9 @@ export default function MenuPage() {
         {!loading && menuItems.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
             <Utensils className="w-12 h-12 text-gray-300 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">No menu items found</p>
+            <p className="text-gray-500 dark:text-gray-400">
+              No menu items found
+            </p>
           </div>
         )}
 
@@ -340,7 +352,9 @@ export default function MenuPage() {
             <Plus className="w-8 h-8" />
           </div>
           <div className="text-center">
-            <p className="font-bold text-gray-900 dark:text-white">Add New Item</p>
+            <p className="font-bold text-gray-900 dark:text-white">
+              Add New Item
+            </p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Create a new menu entry
             </p>
@@ -398,10 +412,10 @@ export default function MenuPage() {
           modalMode === "add"
             ? "Add Menu Item"
             : modalMode === "edit"
-            ? "Edit Menu Item"
-            : modalMode === "view"
-            ? "Menu Item Details"
-            : "Delete Menu Item"
+              ? "Edit Menu Item"
+              : modalMode === "view"
+                ? "Menu Item Details"
+                : "Delete Menu Item"
         }
         size={modalMode === "delete" ? "sm" : "lg"}
         footer={

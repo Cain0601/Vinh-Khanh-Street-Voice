@@ -9,7 +9,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "FIREBASE_PROJECT_ID": "vinh-khanh-street-voice",
-        "GOOGLE_APPLICATION_CREDENTIALS": "E:\\VSCode\\service_account.json"
+        "GOOGLE_APPLICATION_CREDENTIALS": "service_account.json",
+        "DEV_FIRESTORE_MOCK": "true"
       }
     },
     "https": {
@@ -20,7 +21,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "FIREBASE_PROJECT_ID": "vinh-khanh-street-voice",
-        "GOOGLE_APPLICATION_CREDENTIALS": "E:\\VSCode\\service_account.json"
+        "GOOGLE_APPLICATION_CREDENTIALS": "service_account.json",
+        "DEV_FIRESTORE_MOCK": "true"
       }
     }
   }

@@ -10,7 +10,7 @@ namespace FoodTour.Api.Repositories
 
         public AnalyticsRepository(Services.FirestoreService firestoreService)
         {
-            _db = firestoreService.Db;
+            _db = firestoreService.DbOrNull!;
         }
 
         public async Task<AnalyticsEvent> AddAsync(AnalyticsEvent analyticsEvent)

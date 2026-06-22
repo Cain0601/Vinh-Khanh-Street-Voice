@@ -7,6 +7,32 @@ using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Dev mock flag for Firestore and Firebase behaviors
+var useDevMock = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DEV_FIRESTORE_MOCK"))
+                 && Environment.GetEnvironmentVariable("DEV_FIRESTORE_MOCK") == "true";
+
+// Warn early if credential file is missing (server still starts; data endpoints return 500 until fixed)
+{
+    var credPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+    if (string.IsNullOrEmpty(credPath))
+    {
+        Console.WriteLine("⚠️  GOOGLE_APPLICATION_CREDENTIALS is not set.");
+        Console.WriteLine("⚠️  Place service_account.json in the FoodTour.Api folder and set the env var.");
+        Console.WriteLine("⚠️  Or set DEV_FIRESTORE_MOCK=true to skip Firestore entirely.");
+    }
+    else if (!File.Exists(credPath))
+    {
+        Console.WriteLine($"⚠️  Credential file not found: {credPath}");
+        Console.WriteLine($"⚠️  Copy your service_account.json to that location, or to the project folder");
+        Console.WriteLine($"⚠️  and update GOOGLE_APPLICATION_CREDENTIALS in launchSettings.json.");
+        Console.WriteLine($"⚠️  Or set DEV_FIRESTORE_MOCK=true to skip Firestore entirely.");
+    }
+    else
+    {
+        Console.WriteLine($"✅ Credential file found: {credPath}");
+    }
+}
+
 // ─────────────────── Services ───────────────────
 
 builder.Services.AddHttpClient();
@@ -26,23 +52,31 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Firebase Admin SDK initialization
-if (FirebaseApp.DefaultInstance == null)
+// Firebase Admin SDK initialization (skip in dev mock)
+if (!useDevMock)
 {
-    try
+    if (FirebaseApp.DefaultInstance == null)
     {
-        FirebaseApp.Create(new AppOptions
+        try
         {
-            Credential = GoogleCredential.GetApplicationDefault()
-        });
-    }
-    catch
-    {
-        Console.WriteLine("⚠️  Firebase Admin SDK not initialized — set GOOGLE_APPLICATION_CREDENTIALS env var.");
+            FirebaseApp.Create(new AppOptions
+            {
+                Credential = GoogleCredential.GetApplicationDefault()
+            });
+            Console.WriteLine("✅ Firebase Admin SDK initialized.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Firebase Admin SDK init failed: {ex.Message}");
+            Console.WriteLine("⚠️  Falling back to dev-mock mode.");
+            useDevMock = true;
+        }
     }
 }
 
-// Firestore
+// Firestore — always register so Repositories can resolve it.
+// FirestoreService will hold a null Db when credentials are missing;
+// repositories return empty results in that case.
 builder.Services.AddSingleton<FirestoreService>();
 
 // Repositories
@@ -105,8 +139,7 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-// 6. Health check
-app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTime.UtcNow }));
+// 6. (Health handled by HealthController at GET /health)
 
 // ─────────────────── DB Init ───────────────────
 

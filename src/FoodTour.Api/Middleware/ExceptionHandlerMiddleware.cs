@@ -36,6 +36,17 @@ namespace FoodTour.Api.Middleware
                 _logger.LogWarning(ex, "Bad request: {Path}", context.Request.Path);
                 await WriteErrorResponse(context, HttpStatusCode.BadRequest, ex.Message);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Service unavailable: {Path}", context.Request.Path);
+                await WriteErrorResponse(context, HttpStatusCode.ServiceUnavailable, ex.Message);
+            }
+            catch (NullReferenceException)
+            {
+                _logger.LogWarning("Data service null (credentials missing?): {Path}", context.Request.Path);
+                await WriteErrorResponse(context, HttpStatusCode.ServiceUnavailable,
+                    "A backend service is unavailable. Check GOOGLE_APPLICATION_CREDENTIALS points to a valid service_account.json.");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unhandled exception on {Method} {Path}", context.Request.Method, context.Request.Path);

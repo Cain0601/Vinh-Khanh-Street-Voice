@@ -24,7 +24,7 @@ const MOCK_NOTIFICATIONS = [
     iconColor: "text-yellow-500",
     iconBg: "bg-yellow-50 dark:bg-yellow-500/10",
     title: "New 5-star review!",
-    desc: "A customer just rated \"Bánh mì Hội An\" 5 stars.",
+    desc: 'A customer just rated "Bánh mì Hội An" 5 stars.',
     time: "2 min ago",
     unread: true,
   },
@@ -34,7 +34,7 @@ const MOCK_NOTIFICATIONS = [
     iconColor: "text-green-500",
     iconBg: "bg-green-50 dark:bg-green-500/10",
     title: "POI approved",
-    desc: "Your new location \"Cơm Gà Tam Kỳ\" has been approved.",
+    desc: 'Your new location "Cơm Gà Tam Kỳ" has been approved.',
     time: "15 min ago",
     unread: true,
   },
@@ -44,7 +44,7 @@ const MOCK_NOTIFICATIONS = [
     iconColor: "text-orange-500",
     iconBg: "bg-orange-50 dark:bg-orange-500/10",
     title: "Menu item sold out",
-    desc: "\"Mì Quảng đặc biệt\" has been marked as unavailable.",
+    desc: '"Mì Quảng đặc biệt" has been marked as unavailable.',
     time: "1 hr ago",
     unread: true,
   },
@@ -84,7 +84,7 @@ export default function OwnerTopbar() {
 
   const markRead = (id: number) =>
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
+      prev.map((n) => (n.id === id ? { ...n, unread: false } : n)),
     );
 
   const initials =
@@ -112,7 +112,10 @@ export default function OwnerTopbar() {
           {/* RoleSwitcher omitted in this project - placeholder */}
 
           <button
-            onClick={() => { setIsNotifOpen(!isNotifOpen); setIsProfileOpen(false); }}
+            onClick={() => {
+              setIsNotifOpen(!isNotifOpen);
+              setIsProfileOpen(false);
+            }}
             className="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors"
           >
             <Bell className="w-6 h-6" />
@@ -126,7 +129,10 @@ export default function OwnerTopbar() {
           <div className="h-8 w-px bg-gray-100 dark:bg-gray-800 mx-2"></div>
 
           <button
-            onClick={() => { setIsProfileOpen(!isProfileOpen); setIsNotifOpen(false); }}
+            onClick={() => {
+              setIsProfileOpen(!isProfileOpen);
+              setIsNotifOpen(false);
+            }}
             className="flex items-center gap-3 p-1.5 pl-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all group relative"
           >
             <div className="text-right hidden sm:block">
@@ -159,7 +165,9 @@ export default function OwnerTopbar() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-gray-900 dark:text-white">Notifications</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white">
+                  Notifications
+                </h3>
                 {unreadCount > 0 && (
                   <span className="px-2 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-full">
                     {unreadCount} new
@@ -186,35 +194,56 @@ export default function OwnerTopbar() {
 
             {/* List */}
             <ul className="divide-y divide-gray-50 dark:divide-gray-800 max-h-[420px] overflow-y-auto">
-              {notifications.map(({ id, icon: Icon, iconColor, iconBg, title, desc, time, unread }) => (
-                <li
-                  key={id}
-                  onClick={() => markRead(id)}
-                  className={`flex gap-4 px-5 py-4 cursor-pointer transition-colors ${
-                    unread
-                      ? "bg-orange-50/60 dark:bg-orange-500/5 hover:bg-orange-50 dark:hover:bg-orange-500/10"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  }`}
-                >
-                  <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
-                    <Icon className={`w-5 h-5 ${iconColor}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm font-semibold leading-snug ${
-                        unread ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"
-                      }`}>
-                        {title}
-                      </p>
-                      {unread && (
-                        <span className="shrink-0 w-2 h-2 bg-orange-500 rounded-full mt-1.5" />
-                      )}
+              {notifications.map(
+                ({
+                  id,
+                  icon: Icon,
+                  iconColor,
+                  iconBg,
+                  title,
+                  desc,
+                  time,
+                  unread,
+                }) => (
+                  <li
+                    key={id}
+                    onClick={() => markRead(id)}
+                    className={`flex gap-4 px-5 py-4 cursor-pointer transition-colors ${
+                      unread
+                        ? "bg-orange-50/60 dark:bg-orange-500/5 hover:bg-orange-50 dark:hover:bg-orange-500/10"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div
+                      className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}
+                    >
+                      <Icon className={`w-5 h-5 ${iconColor}`} />
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{desc}</p>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1 font-medium">{time}</p>
-                  </div>
-                </li>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p
+                          className={`text-sm font-semibold leading-snug ${
+                            unread
+                              ? "text-gray-900 dark:text-white"
+                              : "text-gray-600 dark:text-gray-400"
+                          }`}
+                        >
+                          {title}
+                        </p>
+                        {unread && (
+                          <span className="shrink-0 w-2 h-2 bg-orange-500 rounded-full mt-1.5" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                        {desc}
+                      </p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-1 font-medium">
+                        {time}
+                      </p>
+                    </div>
+                  </li>
+                ),
+              )}
             </ul>
 
             {/* Footer */}

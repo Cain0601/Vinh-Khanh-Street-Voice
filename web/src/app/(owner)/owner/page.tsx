@@ -61,7 +61,8 @@ export default function OwnerDashboard() {
     try {
       setLoading(true);
       const response = await api.get("/owners/dashboard");
-      setDashboard(response?.data || initialData);
+      setDashboard(((response as any)?.data as DashboardData) || initialData);
+
     } catch (error) {
       console.error("Failed to fetch dashboard:", error);
     } finally {

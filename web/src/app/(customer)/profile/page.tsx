@@ -1,36 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
-import { Globe, HelpCircle, Info, Shield, Check, X, LogOut, Store, User, Mail, Pencil, KeyRound } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Globe, HelpCircle, Info, Shield, X, Store, User, Mail, Pencil, KeyRound, LogOut } from "lucide-react";
+import { listenAuthState, signOut } from "@/lib/auth";
 import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/i18n";
 import { authApi } from "@/lib/api/auth";
 import { moderationApi } from "@/lib/api/moderation";
 import { useToast } from "@/components/Toast";
+import AuthButton from "@/components/AuthButton";
 import Header from "@/components/Layout/Header";
-
-const languages = [
-  { id: "en", name: "English", flag: "🇬🇧", label: "English" },
-  { id: "vi", name: "Tiếng Việt", flag: "🇻🇳", label: "Vietnamese" },
-  { id: "zh", name: "中文", flag: "🇨🇳", label: "Chinese (Mandarin)" },
-  { id: "hi", name: "हिन्दी", flag: "🇮🇳", label: "Hindi" },
-  { id: "es", name: "Español", flag: "🇪🇸", label: "Spanish" },
-  { id: "fr", name: "Français", flag: "🇫🇷", label: "French" },
-  { id: "ar", name: "العربية", flag: "🇸🇦", label: "Arabic" },
-  { id: "pt", name: "Português", flag: "🇵🇹", label: "Portuguese" },
-  { id: "ru", name: "Русский", flag: "🇷🇺", label: "Russian" },
-  { id: "id", name: "Bahasa Indonesia", flag: "🇮🇩", label: "Indonesian" },
-  { id: "ja", name: "日本語", flag: "🇯🇵", label: "Japanese" },
-  { id: "ko", name: "한국어", flag: "🇰🇷", label: "Korean" },
-  { id: "de", name: "Deutsch", flag: "🇩🇪", label: "German" },
-  { id: "it", name: "Italiano", flag: "🇮🇹", label: "Italian" },
-  { id: "th", name: "ภาษาไทย", flag: "🇹🇭", label: "Thai" },
-];
+import LanguageSwitcher from "@/components/Common/LanguageSwitcher";
 
 export default function SettingsPage() {
-  const { user, language, setLanguage, updateUser, logout } = useUserStore();
+  const { user, updateUser } = useUserStore();
   const { addToast } = useToast();
+  const router = useRouter();
+  const [authReady, setAuthReady] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isRequestingUpgrade, setIsRequestingUpgrade] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -43,42 +30,44 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
   });
-  const router = useRouter();
   const t = useTranslation();
-  const displayName = user?.fullName || user?.displayName || "Người dùng FoodTour";
+  useEffect(() => {
+    const unsubscribe = listenAuthState(() => setAuthReady(true));
+    return unsubscribe;
+  }, []);
+
+  // useEffect(() => {
+  //   if (authReady && user && !user.isOnboarded) {
+  //     router.replace("/onboarding");
+  //   }
+  // }, [authReady, router, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    setProfileForm({
+      fullName: user.fullName || user.displayName || "",
+      email: user.email || "",
+    });
+  }, [user]);
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-zinc-400">
+        Đang tải...
+      </div>
+    );
+  }
+
+  // if (!user) {
+  //   return (
+  //     <div className="flex items-center justify-center min-h-screen bg-background">
+  //       <AuthButton />
+  //     </div>
+  //   );
+  // }
   const displayEmail = user?.email || "Chưa có email";
   const displayRole = user?.role || "USER";
-
-  const handleLanguageChange = async (langId: string) => {
-    setLanguage(langId);
-    if (!user) {
-      setShowLanguageModal(false);
-      return;
-    }
-
-    setIsUpdating(true);
-    try {
-      const result = await authApi.updateProfile({ language: langId });
-      
-      if (result.success) {
-        updateUser({ language: langId });
-        addToast("Đã cập nhật ngôn ngữ", "success");
-      } else {
-        addToast(result.message || "Không thể cập nhật ngôn ngữ", "error");
-      }
-    } catch (error) {
-      console.error("Error updating language:", error);
-      addToast("Không thể cập nhật ngôn ngữ", "error");
-    } finally {
-      setIsUpdating(false);
-      setShowLanguageModal(false);
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    router.push("/");
-  };
 
   const openEditModal = () => {
     setProfileForm({
@@ -167,61 +156,71 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background text-white flex flex-col">
       {/* Header */}
-      <Header title="Hồ sơ" showBack onBack={() => router.push("/home")} />
+      <Header title={t.profile.title} showBack onBack={() => router.push("/home")} />
 
       <div className="p-4 space-y-8 pb-24 h-[calc(100vh-100px)] overflow-y-auto">
         {/* USER INFO Card */}
         <div className="bg-secondary border border-zinc-800 rounded-3xl p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
-                <User className="h-7 w-7" />
+          
+            {!user ? (
+              <div className="flex min-w-0 items-center justify-center gap-4">
+                <AuthButton />
               </div>
-              <div className="min-w-0">
-                <p className="truncate text-lg font-semibold text-white">{displayName}</p>
-                <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-zinc-400">
-                  <Mail className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{displayEmail}</span>
+            ) : (
+            <>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+                  <User className="h-7 w-7" />
                 </div>
-                <span className="mt-3 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                  {displayRole}
-                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-semibold text-white">{profileForm.fullName}</p>
+                  <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-zinc-400">
+                    <Mail className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{displayEmail}</span>
+                  </div>
+                  <span className="mt-3 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                    {displayRole}
+                  </span>
+                </div>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={openEditModal}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
-              aria-label="Sửa thông tin cá nhân"
-            >
-              <Pencil className="h-5 w-5" />
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={openEditModal}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+                aria-label="Sửa thông tin cá nhân"
+              >
+                <Pencil className="h-5 w-5" />
+              </button>
+              </div>
+            </>
+          )}
+          
+          
         </div>
 
         {/* GENERAL Section */}
         <div>
           <h3 className="text-zinc-500 text-xs font-semibold uppercase tracking-widest px-2 mb-4">{t.settings.sectionGeneral}</h3>
-          
+
           <div className="space-y-3">
             {/* Language - Click to open modal */}
-            <button 
+            <button
+              type="button"
               onClick={() => setShowLanguageModal(true)}
-              className="w-full bg-secondary border border-zinc-800 hover:border-zinc-700 rounded-3xl p-5 flex items-center justify-between transition-all active:scale-[0.985]"
+              className="w-full bg-secondary border border-zinc-800 hover:border-zinc-700 rounded-3xl p-5 flex items-center justify-between transition-colors"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-emerald-400" />
+                <div className="w-10 h-10 rounded-2xl bg-zinc-700 flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-emerald-300" />
                 </div>
-                <div className="text-left">
-                  <p className="font-medium">{t.settings.language}</p>
-                  <p className="text-sm text-zinc-400">
-                    {languages.find(l => l.id === language)?.name || "Tiếng Việt"}
-                  </p>
-                </div>
+                <p className="font-medium">{t.settings.language}</p>
               </div>
-              <div className="text-emerald-400 text-xl">›</div>
             </button>
+            <LanguageSwitcher
+              isOpen={showLanguageModal}
+              onClose={() => setShowLanguageModal(false)}
+            />
 
             {/* <div className="bg-secondary border border-zinc-800 rounded-3xl p-5">
               <div className="flex items-center gap-4 mb-4">
@@ -253,7 +252,7 @@ export default function SettingsPage() {
         {/* SUPPORT Section */}
         <div>
           <h3 className="text-zinc-500 text-xs font-semibold uppercase tracking-widest px-2 mb-4">{t.settings.sectionSupport}</h3>
-          
+
           <div className="space-y-3">
             <button className="w-full bg-secondary border border-zinc-800 hover:border-zinc-700 rounded-3xl p-5 flex items-center justify-between transition-colors">
               <div className="flex items-center gap-4">
@@ -290,9 +289,9 @@ export default function SettingsPage() {
         {/* PARTNERSHIP Section */}
         {user?.role === 'USER' && (<div>
           <h3 className="text-zinc-500 text-xs font-semibold uppercase tracking-widest px-2 mb-4">{t.settings.sectionPartnership}</h3>
-          
+
           <div className="space-y-3">
-            <button 
+            <button
               onClick={handleRequestOwnerUpgrade}
               disabled={isRequestingUpgrade}
               className="w-full bg-secondary border border-zinc-800 hover:border-orange-500/50 rounded-3xl p-5 flex items-center justify-between transition-all group active:scale-[0.985]"
@@ -311,78 +310,22 @@ export default function SettingsPage() {
           </div>
         </div>)}
 
-        {/* Log Out */}
-        <button 
-          onClick={handleLogout}
-          className="w-full h-14 bg-secondary/70 hover:bg-red-500/10 border border-zinc-800 hover:border-red-500/50 text-zinc-400 hover:text-red-400 rounded-3xl transition-all font-medium flex items-center justify-center gap-3 text-lg mt-6"
+        {user && (<button
+          type="button"
+          onClick={signOut}
+          className={`inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-secondary px-5 py-3 font-semibold text-zinc-300 transition-all hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 w-full mt-6 h-14 text-lg`}
         >
-          <LogOut className="w-5 h-5" />
-          {t.settings.logOut}
-        </button>
+          <LogOut className="h-4 w-4" />
+          Đăng xuất
+        </button>)}
       </div>
-
-      {/* ==================== LANGUAGE MODAL ==================== */}
-      {showLanguageModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={() => setShowLanguageModal(false)}>
-          <div className="bg-zinc-900 w-full max-w-md sm:rounded-3xl rounded-t-3xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-              <h2 className="text-xl font-semibold">{t.settings.chooseLanguage}</h2>
-              <button 
-                onClick={() => setShowLanguageModal(false)}
-                className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-zinc-400" />
-              </button>
-            </div>
-
-            {/* Language List */}
-            <div className="p-3 max-h-[60vh] overflow-y-auto">
-              {languages.map((lang) => (
-                <button
-                  key={lang.id}
-                  onClick={() => handleLanguageChange(lang.id)}
-                  disabled={isUpdating}
-                  className={`w-full flex items-center justify-between p-5 rounded-2xl mb-2 transition-all ${
-                    language === lang.id 
-                      ? "bg-orange-500/10 border border-orange-500" 
-                      : "hover:bg-zinc-800 border border-transparent"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-3xl">{lang.flag}</span>
-                    <div className="text-left">
-                      <p className="font-medium text-lg">{lang.name}</p>
-                      <p className="text-sm text-zinc-500">{lang.label}</p>
-                    </div>
-                  </div>
-                  
-                  {language === lang.id && (
-                    <Check className="w-6 h-6 text-orange-500" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-zinc-800">
-              <button 
-                onClick={() => setShowLanguageModal(false)}
-                className="w-full py-4 text-zinc-400 hover:text-white font-medium transition-colors"
-              >
-                {t.settings.cancel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ==================== EDIT PROFILE MODAL ==================== */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={() => setShowEditModal(false)}>
           <div className="bg-zinc-900 w-full max-w-md sm:rounded-3xl rounded-t-3xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b border-zinc-800">
-              <h2 className="text-xl font-semibold">Chỉnh sửa hồ sơ</h2>
+              <h2 className="text-xl font-semibold">{t.profile.editTitle}</h2>
               <button
                 onClick={() => setShowEditModal(false)}
                 className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
@@ -395,25 +338,25 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-widest text-zinc-500">
                   <User className="h-4 w-4" />
-                  Thông tin cá nhân
+                  {t.profile.sectionInfo}
                 </div>
                 <label className="block space-y-2">
-                  <span className="text-sm text-zinc-400">Họ và tên</span>
+                  <span className="text-sm text-zinc-400">{t.profile.fullName}</span>
                   <input
                     value={profileForm.fullName}
                     onChange={(event) => setProfileForm((current) => ({ ...current, fullName: event.target.value }))}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none transition-colors focus:border-emerald-500"
-                    placeholder="Nhập họ và tên"
+                    placeholder={t.profile.placeholderFullName}
                   />
                 </label>
                 <label className="block space-y-2">
-                  <span className="text-sm text-zinc-400">Email</span>
+                  <span className="text-sm text-zinc-400">{t.profile.email}</span>
                   <input
                     type="email"
                     value={profileForm.email}
                     onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none transition-colors focus:border-emerald-500"
-                    placeholder="name@example.com"
+                    placeholder={t.profile.placeholderEmail}
                   />
                 </label>
                 <button
@@ -422,7 +365,7 @@ export default function SettingsPage() {
                   disabled={isUpdating}
                   className="w-full rounded-2xl bg-emerald-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Lưu thông tin
+                  {t.profile.saveInfo}
                 </button>
               </div>
 
@@ -431,26 +374,26 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-widest text-zinc-500">
                   <KeyRound className="h-4 w-4" />
-                  Đổi mật khẩu
+                  {t.profile.sectionPassword}
                 </div>
                 <label className="block space-y-2">
-                  <span className="text-sm text-zinc-400">Mật khẩu mới</span>
+                  <span className="text-sm text-zinc-400">{t.profile.newPassword}</span>
                   <input
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none transition-colors focus:border-orange-500"
-                    placeholder="Tối thiểu 6 ký tự"
+                    placeholder={t.profile.placeholderPasswordMin}
                   />
                 </label>
                 <label className="block space-y-2">
-                  <span className="text-sm text-zinc-400">Xác nhận mật khẩu</span>
+                  <span className="text-sm text-zinc-400">{t.profile.confirmPassword}</span>
                   <input
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))}
                     className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none transition-colors focus:border-orange-500"
-                    placeholder="Nhập lại mật khẩu mới"
+                    placeholder={t.profile.placeholderConfirmPassword}
                   />
                 </label>
                 <button
@@ -459,7 +402,7 @@ export default function SettingsPage() {
                   disabled={isUpdating}
                   className="w-full rounded-2xl bg-orange-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Đổi mật khẩu
+                  {t.profile.changePassword}
                 </button>
               </div>
             </div>

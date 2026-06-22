@@ -9,21 +9,29 @@ namespace FoodTour.Api.Services
 {
     public class CloudinaryService
     {
-        private readonly Cloudinary _cloudinary;
+        private readonly Cloudinary? _cloudinary;
 
         public CloudinaryService(IConfiguration config)
         {
+            var cloudName = config["Cloudinary:CloudName"];
+            if (string.IsNullOrEmpty(cloudName))
+            {
+                Console.WriteLine("⚠️  CloudinaryService: Cloudinary:CloudName not configured — image upload disabled.");
+                return;
+            }
             var account = new Account(
-                config["Cloudinary:CloudName"],
+                cloudName,
                 config["Cloudinary:ApiKey"],
                 config["Cloudinary:ApiSecret"]
             );
-
             _cloudinary = new Cloudinary(account);
         }
 
         public async Task<string?> UploadImageAsync(IFormFile file)
         {
+            if (_cloudinary == null)
+                throw new InvalidOperationException("Image upload is disabled. Configure Cloudinary:CloudName, ApiKey, ApiSecret in appsettings.json.");
+
             if (file == null || file.Length == 0) return null;
 
             using var stream = file.OpenReadStream();

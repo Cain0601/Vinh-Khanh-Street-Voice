@@ -1,216 +1,302 @@
 'use client'
 
-import { useState } from 'react'
-import Badge from '@/components/Common/Badge'
-import Button from '@/components/Common/Button'
-import IconButton from '@/components/Common/IconButton'
-
-interface MenuItem {
-  id: string
-  name: string
-  price: string
-  category: string
-}
+import React, { useState, useRef, useEffect } from 'react'
+import { useTranslation } from '@/i18n'
+import { Play, Pause, MapPinned, Home } from 'lucide-react'
+import Link from 'next/link'
 
 interface PoiDetailProps {
   id: string
   name: string
-  description: string
-  images: string[]
+  description?: string
+  images?: string[]
   category: string
-  rating: number
-  reviewCount: number
   address: string
-  phone: string
-  hours: string
-  menu: MenuItem[]
   distance: number
+  audioUrl?: string
   isBookmarked?: boolean
   onBookmarkToggle?: () => void
 }
 
 export default function PoiDetail({
-  id,
   name,
   description,
-  images,
+  images = [],
   category,
-  rating,
-  reviewCount,
   address,
-  phone,
-  hours,
-  menu,
   distance,
-  isBookmarked = false,
+  audioUrl,
+  isBookmarked,
   onBookmarkToggle,
 }: PoiDetailProps) {
-  const [activeImageIndex, setActiveImageIndex] = useState(0)
-  const [expandedMenu, setExpandedMenu] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
-  // Group menu by category
-  const menuByCategory = menu.reduce(
-    (acc, item) => {
-      if (!acc[item.category]) {
-        acc[item.category] = []
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audioProgress, setAudioProgress] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const t = useTranslation();
+  useEffect(() => {
+    const audio = audioRef.current
+
+    if (!audio) return
+
+    const updateProgress = () => {
+      setCurrentTime(audio.currentTime)
+      setDuration(audio.duration || 0)
+
+      if (audio.duration) {
+        setAudioProgress(
+          (audio.currentTime / audio.duration) * 100
+        )
       }
-      acc[item.category].push(item)
-      return acc
-    },
-    {} as Record<string, MenuItem[]>
-  )
+    }
+
+    audio.addEventListener('timeupdate', updateProgress)
+    audio.addEventListener('loadedmetadata', updateProgress)
+
+    return () => {
+      audio.removeEventListener(
+        'timeupdate',
+        updateProgress
+      )
+      audio.removeEventListener(
+        'loadedmetadata',
+        updateProgress
+      )
+    }
+  }, [])
+
+  const togglePlay = () => {
+    const audio = audioRef.current
+
+    if (!audio) return
+
+    if (isPlaying) {
+      audio.pause()
+    } else {
+      audio.play()
+    }
+
+    setIsPlaying(!isPlaying)
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+
+    return `${mins}:${String(secs).padStart(2, '0')}`
+  }
+
+  const coverImage =
+    images.length > 0
+      ? images[0]
+      : 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee'
 
   return (
-    <div className="space-y-4">
-      {/* Image Carousel */}
-      {images.length > 0 && (
-        <div className="relative bg-slate-800 rounded-xl overflow-hidden aspect-video">
-          <img
-            src={images[activeImageIndex]}
-            alt={`${name} - ${activeImageIndex + 1}`}
-            className="w-full h-full object-cover"
-          />
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/85 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex h-dvh w-full max-w-107.5 flex-col overflow-hidden bg-zinc-950 text-white shadow-2xl sm:h-[86dvh] sm:rounded-2xl">
+      {/* Hero Section */}
+      <div className="relative h-[45vh] overflow-hidden">
+        <img
+          src={coverImage}
+          alt={name}
+          className="
+          w-full
+          h-full
+          object-cover
+          "
+        />
 
-          {/* Image Counter */}
-          {images.length > 1 && (
-            <div className="absolute bottom-3 right-3 bg-black/50 px-2 py-1 rounded text-xs text-white">
-              {activeImageIndex + 1} / {images.length}
-            </div>
-          )}
+        <div
+          className="
+          absolute inset-0
+          bg-linear-to-t
+          from-black
+          via-black/40
+          to-transparent
+          "
+        />
 
-          {/* Image Navigation */}
-          {images.length > 1 && (
-            <div className="absolute inset-0 flex items-center justify-between px-2">
-              <button
-                onClick={() =>
-                  setActiveImageIndex((i) => (i - 1 + images.length) % images.length)
-                }
-                className="bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition"
-              >
-                ←
-              </button>
-              <button
-                onClick={() =>
-                  setActiveImageIndex((i) => (i + 1) % images.length)
-                }
-                className="bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition"
-              >
-                →
-              </button>
-            </div>
-          )}
-
-          {/* Bookmark Button */}
-          {onBookmarkToggle && (
-            <button
-              onClick={onBookmarkToggle}
-              className="absolute top-3 right-3"
+        <div className="absolute bottom-6 left-6 right-6">
+          <div className="mb-2">
+            <span
+              className="
+              px-3 py-1
+              rounded-full
+              bg-emerald-500/20
+              border border-emerald-500/30
+              text-emerald-400
+              text-sm
+              "
             >
-              <IconButton
-                icon={isBookmarked ? '❤️' : '🤍'}
-                size="md"
-                variant="secondary"
-              />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-white">{name}</h1>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="primary">{category}</Badge>
-          <div className="text-sm font-medium text-slate-300">
-            ⭐ {rating.toFixed(1)} ({reviewCount} reviews)
+              {category}
+            </span>
           </div>
-          <div className="text-sm text-slate-400">📍 {distance.toFixed(1)} km</div>
+
+          <h1 className="text-4xl font-bold mb-2">
+            {name}
+          </h1>
+
+          <p className="text-slate-300">
+            📍 {distance.toFixed(1)} km
+          </p>
         </div>
       </div>
 
-      {/* Description */}
-      {description && (
-        <div className="bg-slate-800/50 p-3 rounded-lg">
-          <p className="text-sm text-slate-300 leading-relaxed">{description}</p>
-        </div>
+      {/* Bookmark button */}
+      {onBookmarkToggle && (
+        <button
+          onClick={onBookmarkToggle}
+          className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-white hover:bg-slate-700"
+        >
+          {isBookmarked ? '★' : '☆'}
+        </button>
       )}
 
-      {/* Contact Info */}
-      <div className="bg-slate-800 rounded-lg p-3 space-y-2">
-        <div className="flex items-start gap-2 text-sm">
-          <span>📍</span>
-          <span className="text-slate-300">{address}</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span>📞</span>
-          <a href={`tel:${phone}`} className="text-emerald-500 hover:text-emerald-400">
-            {phone}
-          </a>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span>🕐</span>
-          <span className="text-slate-300">{hours}</span>
-        </div>
-      </div>
-
-      {/* Menu */}
-      {menu.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-xl font-bold text-white">Menu</h2>
-          {Object.entries(menuByCategory).map(([catName, items]) => (
-            <div key={catName} className="bg-slate-800 rounded-lg overflow-hidden">
-              <button
-                onClick={() =>
-                  setExpandedMenu(expandedMenu === catName ? null : catName)
-                }
-                className="w-full flex items-center justify-between p-3 hover:bg-slate-700 transition"
-              >
-                <h3 className="font-medium text-white">{catName}</h3>
-                <span
-                  className={`transition ${
-                    expandedMenu === catName ? 'rotate-180' : ''
-                  }`}
-                >
-                  ▼
-                </span>
+      <div className="px-5 pb-10 -mt-8 relative z-10">
+        {/* Audio Player */}
+        {audioUrl && (
+          <div
+            className="
+            backdrop-blur-xl
+            bg-white/10
+            border border-white/10
+            rounded-3xl
+            p-5
+            shadow-2xl
+            mb-6
+            "
+          >
+            <audio
+              ref={audioRef}
+              src={audioUrl}
+              preload="metadata"
+            />
+            <div className="flex items-center gap-4">
+              <button onClick={togglePlay} className=" h-16 w-16 rounded-full bg-emerald-500 flex items-center justify-center hover:scale-105 transition " >
+                {isPlaying ? ( 
+                  <Pause size={26} /> 
+                ) : (
+                  <Play size={26} />
+                )}
               </button>
-
-              {expandedMenu === catName && (
-                <div className="bg-slate-900/50 border-t border-slate-700 divide-y divide-slate-700">
-                  {items.map((item) => (
-                    <div key={item.id} className="p-3 flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-medium text-white">{item.name}</p>
-                      </div>
-                      <p className="font-semibold text-emerald-500">{item.price}</p>
-                    </div>
-                  ))}
+              <div className="flex-1">
+                <p className="font-semibold text-lg">
+                  {t.poiDetail.audioGuide}
+                </p>
+                <p className="text-slate-400 text-sm">
+                  {t.poiDetail.audioDescription}
+                </p>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              </div>
+            <div className="mt-5">
+              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="
+                  h-full
+                  bg-linear-to-r
+                  from-emerald-400
+                  to-green-500
+                  "
+                  style={{
+                    width: `${audioProgress}%`,
+                  }}
+                />
+              </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-2 pt-4">
-        <Button
-          variant="primary"
-          size="md"
-          fullWidth
-          onClick={() => window.location.href = `tel:${phone}`}
+              <div className="flex justify-between mt-2 text-xs text-slate-400">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Description */}
+        {description && (
+          <div
+            className="
+            bg-white/5
+            backdrop-blur-xl
+            border border-white/10
+            rounded-3xl
+            p-5
+            mb-6
+            "
+          >
+            <h2 className="font-semibold text-xl mb-3">
+              {t.poiDetail.intro}
+            </h2>
+
+            <p className="text-slate-300 leading-7">
+              {description}
+            </p>
+          </div>
+        )}
+
+        {/* Address */}
+        <div
+          className="
+          bg-white/5
+          backdrop-blur-xl
+          border border-white/10
+          rounded-3xl
+          p-5
+          mb-6
+          "
         >
-          Call
-        </Button>
-        <Button
-          variant="secondary"
-          size="md"
-          fullWidth
-          onClick={() => window.location.href = `https://maps.google.com/?q=${address}`}
-        >
-          Get Directions
-        </Button>
+          <h2 className="font-semibold text-xl mb-3">
+            {t.poiDetail.address}
+          </h2>
+
+          <p className="text-slate-300">
+            {address}
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-4">
+          <Link
+            href="/map"
+            className="
+            bg-emerald-500
+            hover:bg-emerald-600
+            rounded-2xl
+            py-4
+            font-semibold
+            flex
+            items-center
+            justify-center
+            gap-2
+            transition
+            "
+          >
+            <MapPinned size={20} />
+            {t.poiDetail.viewMap}
+          </Link>
+
+          <Link
+            href="/"
+            className="
+            bg-white/10
+            border border-white/10
+            hover:bg-white/20
+            rounded-2xl
+            py-4
+            font-semibold
+            flex
+            items-center
+            justify-center
+            gap-2
+            transition
+            "
+          >
+            <Home size={20} />
+            {t.poiDetail.backHome}
+          </Link>
+        </div>
+      </div>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, SkipForward, SkipBack, X, ChevronDown, ListMusic, MapPin } from 'lucide-react';
 import type { POI } from '@/components/Map/MapView';
+import { useTranslation } from '@/i18n';
 
 interface PoiAudioDrawerProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export default function PoiAudioDrawer({
 }: PoiAudioDrawerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  const t = useTranslation();
 
   // Compute progress from currentTime/duration props when available
   useEffect(() => {
@@ -78,7 +81,6 @@ export default function PoiAudioDrawer({
 
   const hasNext = currentIndex < queuePois.length - 1;
   const hasPrev = currentIndex > 0;
-  console.log('PoiAudioDrawer render', { currentPoi, queuePois, currentIndex, isPlaying, progress });
   // Render Compact Mini-player Mode
   if (!isExpanded) {
     return (
@@ -88,7 +90,7 @@ export default function PoiAudioDrawer({
           onClick={() => setIsExpanded(true)}
         >
           {/* Thumbnail */}
-          <div className="w-12 h-12 rounded bg-slate-700 flex-shrink-0 overflow-hidden">
+          <div className="w-12 h-12 rounded bg-slate-700 shrink-0 overflow-hidden">
             {/* Show title as placeholder, no image available */}
             <div className="w-full h-full flex items-center justify-center text-slate-500">
               <MapPin size={24} />
@@ -99,7 +101,7 @@ export default function PoiAudioDrawer({
           <div className="ml-3 flex-1 overflow-hidden">
             <h4 className="text-white text-sm font-bold truncate">{currentPoi.title}</h4>
             <p className="text-slate-400 text-xs truncate">
-              {queuePois.length > 1 ? `Đang phát ${currentIndex + 1}/${queuePois.length}` : 'Đang phát âm thanh'}
+              {queuePois.length > 1 ? `${t.poiDrawer.playing} ${currentIndex + 1}/${queuePois.length}` : t.poiDrawer.playingAudio}
             </p>
             <p className="text-slate-400 text-xs truncate">{formatTime(currentTime)} / {formatTime(duration)}</p>
           </div>
@@ -158,7 +160,7 @@ export default function PoiAudioDrawer({
           {/* No image available; display placeholder */}
           <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">
             <MapPin size={64} className="mb-4" />
-            <p>Chưa có hình ảnh</p>
+             <p>{t.poiDrawer.noImage}</p>
           </div>
         </div>
 
@@ -232,10 +234,10 @@ export default function PoiAudioDrawer({
 
         {/* Additional Info */}
         <div className="bg-slate-800/50 rounded-xl p-5 mb-4">
-          <h3 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-2">Thông tin</h3>
-          <p className="text-slate-300 text-sm leading-relaxed mb-4">
-            {currentPoi.summary}
-          </p>
+            <h3 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider mb-2">{t.poiDrawer.info}</h3>
+            <p className="text-slate-300 text-sm leading-relaxed mb-4">
+              {currentPoi.summary}
+            </p>
           {currentPoi.address && (
             <div className="flex items-start gap-2 text-sm mb-2">
               <span className="text-slate-500 shrink-0">Địa chỉ:</span>

@@ -25,7 +25,7 @@ export default function MapFilters({ activeFilter, onFilterChange }: MapFiltersP
             key={filter.id}
             onClick={() => onFilterChange(filter.id)}
             className={cn(
-              'flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border snap-start',
+              'shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border snap-start',
               activeFilter === filter.id
                 ? 'bg-emerald-500 text-white border-emerald-500'
                 : 'bg-slate-700 text-slate-300 border-slate-600 hover:border-slate-500'

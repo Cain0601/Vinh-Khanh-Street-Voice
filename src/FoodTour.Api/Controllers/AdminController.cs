@@ -299,7 +299,7 @@ namespace FoodTour.Api.Controllers
                 UserAgent = HttpContext.Request.Headers["User-Agent"].FirstOrDefault()
             });
 
-            return CreatedAtAction(null, null, ApiResponse.Ok(created, "Category created"));
+            return StatusCode(201, ApiResponse.Ok(created, "Category created"));
         }
 
         /// <summary>
@@ -410,14 +410,40 @@ namespace FoodTour.Api.Controllers
         }
 
         /// <summary>
-        /// Get heatmap data
+        /// Get heatmap data: POI locations weighted by visit intensity (views + listens + QR scans)
         /// </summary>
         [HttpGet("analytics/heatmap")]
         public async Task<IActionResult> GetHeatmap()
         {
-            // Return location-based analytics events
-            var events = await _analyticsRepo.GetByTypeAsync("LOCATION", limit: 500);
-            return Ok(ApiResponse.Ok(events));
+            var pois = await _poiRepo.GetAllUnfilteredAsync();
+            var listenCounts = await _analyticsRepo.GetEventCountsByPoiAsync("LISTEN");
+            var scanCounts = await _analyticsRepo.GetEventCountsByPoiAsync("QR_SCAN");
+            var viewCounts = await _analyticsRepo.GetEventCountsByPoiAsync("VIEW");
+
+            var points = pois
+                .Where(p => p.Location != null)
+                .Select(p =>
+                {
+                    var listens = listenCounts.GetValueOrDefault(p.Id, 0);
+                    var scans = scanCounts.GetValueOrDefault(p.Id, 0);
+                    var views = viewCounts.GetValueOrDefault(p.Id, 0);
+                    return new
+                    {
+                        poiId = p.Id,
+                        title = p.Title,
+                        address = p.Address,
+                        lat = p.Location!.Value.Latitude,
+                        lng = p.Location.Value.Longitude,
+                        listens,
+                        scans,
+                        views,
+                        intensity = listens + scans + views
+                    };
+                })
+                .OrderByDescending(p => p.intensity)
+                .ToList();
+
+            return Ok(ApiResponse.Ok(points));
         }
         // ──────────────────── POI MANAGEMENT (ADMIN) ────────────────────
 

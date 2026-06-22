@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using PiperSharp;
@@ -32,136 +33,155 @@ namespace FoodTour.Api.Services
             }
 
             Console.WriteLine("[PiperTTS] Provider obtained – starting inference.");
-            // (AudioOutputType)0 is usually Wav or default
             var audioData = await provider.InferAsync(text, AudioOutputType.Wav, CancellationToken.None);
             Console.WriteLine($"[PiperTTS] Inference completed – audio data length: {(audioData?.Length ?? 0)} bytes.");
-            Console.WriteLine( BitConverter.ToString(audioData.Take(12).ToArray()) );
             return audioData;
         }
 
         private async Task<PiperProvider?> GetProviderForLanguageAsync(string langCode)
-{
-    Console.WriteLine($"[PiperTTS] GetProviderForLanguageAsync called | langCode={langCode}");
-
-    string modelKey = langCode.ToLower() switch
-    {
-        "vi" or "vn" => "vi_VN-vais1000-medium",
-        "en" => "en_US-lessac-medium",
-        "zh" or "cn" or "zh-cn" => "zh_CN-huayan-medium",
-        "ja" or "jp" => "ja_JP-jvnv-medium", //khong co
-        "fr" => "fr_FR-siwis-medium",
-        "es" => "es_ES-sharvard-medium",
-        "hi" => "hi_IN-pratham-medium",
-        "ar" => "ar_JO-kareem-medium",
-        "pt" => "pt_BR-faber-medium",           // hoặc pt_PT nếu thích
-        "ru" => "ru_RU-irina-medium",
-        "id" => "id_ID-news_tts-medium",
-        "ko" => "ko_KR-kyeoni-medium",//ko co
-        "de" => "de_DE-eva_k-x_low",
-        "it" => "it_IT-paola-medium",
-        "th" => "th_TH-ponpirun-medium",
-        _ => "en_US-lessac-medium"
-    };
-
-    Console.WriteLine($"[PiperTTS] Using modelKey = {modelKey}");
-
-    if (_providers.TryGetValue(modelKey, out var existing))
-    {
-        Console.WriteLine("[PiperTTS] ✅ Provider found in cache.");
-        return existing;
-    }
-
-    await _downloadLock.WaitAsync();
-    try
-    {
-        if (_providers.TryGetValue(modelKey, out var cached)) return cached;
-
-        var cwd = GetPiperBasePath();
-        Console.WriteLine($"[PiperTTS] Working directory: {cwd}");
-        Directory.SetCurrentDirectory(cwd);
-
-        // Download piper
-        if (!_piperDownloaded)
         {
-            var piperExe = Path.Combine(cwd, "piper", "piper.exe");
-            if (!File.Exists(piperExe))
+            Console.WriteLine($"[PiperTTS] GetProviderForLanguageAsync called | langCode={langCode}");
+
+            string modelKey = langCode.ToLower() switch
             {
-                Console.WriteLine("[PiperTTS] ⬇️ Downloading piper.exe...");
-                var stream = await PiperDownloader.DownloadPiper();
-                PiperDownloader.ExtractPiper(stream, cwd);
-                Console.WriteLine("[PiperTTS] ✅ Piper extracted.");
+                "vi" or "vn" => "vi_VN-vais1000-medium",
+                "en" => "en_US-lessac-medium",
+                "zh" or "cn" or "zh-cn" => "zh_CN-huayan-medium",
+                "ja" or "jp" => "ja_JP-jvnv-medium",
+                "fr" => "fr_FR-siwis-medium",
+                "es" => "es_ES-sharvard-medium",
+                "hi" => "hi_IN-pratham-medium",
+                "ar" => "ar_JO-kareem-medium",
+                "pt" => "pt_BR-faber-medium",
+                "ru" => "ru_RU-irina-medium",
+                "id" => "id_ID-news_tts-medium",
+                "ko" => "ko_KR-kyeoni-medium",
+                "de" => "de_DE-eva_k-x_low",
+                "it" => "it_IT-paola-medium",
+                "th" => "th_TH-ponpirun-medium",
+                _ => "en_US-lessac-medium"
+            };
+
+            Console.WriteLine($"[PiperTTS] Using modelKey = {modelKey}");
+
+            if (_providers.TryGetValue(modelKey, out var existing))
+            {
+                Console.WriteLine("[PiperTTS] ✅ Provider found in cache.");
+                return existing;
             }
-            _piperDownloaded = true;
+
+            await _downloadLock.WaitAsync();
+            try
+            {
+                if (_providers.TryGetValue(modelKey, out var cached)) return cached;
+
+                var cwd = GetPiperBasePath();
+                Console.WriteLine($"[PiperTTS] Working directory: {cwd}");
+                Directory.SetCurrentDirectory(cwd);
+
+                // Download piper (hỗ trợ cả Windows và Linux)
+                if (!_piperDownloaded)
+                {
+                    var piperPath = GetPiperExecutablePath(cwd);
+                    if (!File.Exists(piperPath))
+                    {
+                        Console.WriteLine("[PiperTTS] ⬇️ Downloading piper...");
+                        var stream = await PiperDownloader.DownloadPiper();
+                        PiperDownloader.ExtractPiper(stream, cwd);
+                        Console.WriteLine("[PiperTTS] ✅ Piper extracted.");
+
+                        // Set quyền execute trên Linux
+                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            var piperDir = Path.Combine(cwd, "piper");
+                            if (Directory.Exists(piperDir))
+                            {
+                                foreach (var file in Directory.GetFiles(piperDir))
+                                {
+                                    try
+                                    {
+                                        // Dùng UnixFileMode an toàn hơn
+                                        File.SetUnixFileMode(file, UnixFileMode.UserRead | 
+                                                                UnixFileMode.UserExecute | 
+                                                                UnixFileMode.GroupRead | 
+                                                                UnixFileMode.OtherRead);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"[PiperTTS] Warning: Could not set execute permission on {file}: {ex.Message}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _piperDownloaded = true;
+                }
+
+                // Load or Download model
+                Console.WriteLine($"[PiperTTS] ⬇️ Trying to load model: {modelKey}");
+                VoiceModel model = null;
+
+                try
+                {
+                    model = await VoiceModel.LoadModelByKey(modelKey);
+                }
+                catch (Exception loadEx)
+                {
+                    Console.WriteLine($"[PiperTTS] LoadModelByKey failed: {loadEx.Message}");
+                }
+
+                if (model == null || model.ModelLocation == null || model.Files == null || !model.Files.Any())
+                {
+                    Console.WriteLine($"[PiperTTS] Model invalid or missing → Downloading now...");
+                    model = await PiperDownloader.DownloadModelByKey(modelKey);
+                    Console.WriteLine($"[PiperTTS] ✅ DownloadModelByKey completed.");
+                }
+
+                var config = new PiperConfiguration
+                {
+                    ExecutableLocation = GetPiperExecutablePath(cwd),  // Sửa ở đây
+                    WorkingDirectory = cwd,
+                    Model = model
+                };
+
+                var provider = new PiperProvider(config);
+                _providers.TryAdd(modelKey, provider);
+
+                Console.WriteLine($"[PiperTTS] ✅ Provider created successfully for {modelKey}");
+                return provider;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PiperTTS] ❌ ERROR: {ex.Message}\n{ex.StackTrace}");
+                return null;
+            }
+            finally
+            {
+                _downloadLock.Release();
+            }
         }
 
-       // Load or Download model
-        Console.WriteLine($"[PiperTTS] ⬇️ Trying to load model: {modelKey}");
-        VoiceModel model = null;
-
-        try
+        private string GetPiperExecutablePath(string basePath)
         {
-            model = await VoiceModel.LoadModelByKey(modelKey);
-            Console.WriteLine($"[PiperTTS] LoadModelByKey succeeded.");
-        }
-        catch (Exception loadEx)
-        {
-            Console.WriteLine($"[PiperTTS] LoadModelByKey failed: {loadEx.Message}");
+            var piperDir = Path.Combine(basePath, "piper");
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? Path.Combine(piperDir, "piper.exe")
+                : Path.Combine(piperDir, "piper");
         }
 
-        if (model == null || model.ModelLocation == null || model.Files == null || !model.Files.Any())
+        private string GetPiperBasePath()
         {
-            Console.WriteLine($"[PiperTTS] Model invalid or missing Files dict → Downloading now...");
-            model = await PiperDownloader.DownloadModelByKey(modelKey);  // <-- Quan trọng: dùng cái này
-            Console.WriteLine($"[PiperTTS] ✅ DownloadModelByKey completed.");
+            var assemblyDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            if (assemblyDir == null) 
+                return Path.Combine(Directory.GetCurrentDirectory(), "piper_tts");
+
+            // Ưu tiên folder source (phù hợp dev)
+            var projectPath = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "..", "piper_tts"));
+            if (Directory.Exists(projectPath))
+                return projectPath;
+
+            // Fallback
+            return Path.Combine(assemblyDir, "piper_tts");
         }
-
-        // Debug
-        Console.WriteLine($"[PiperTTS] ModelLocation = {model?.ModelLocation ?? "NULL"}");
-        if (model?.ModelLocation != null)
-        {
-            Console.WriteLine($"[PiperTTS] Files count: {model.Files?.Count ?? 0}");
-            Console.WriteLine($"[PiperTTS] Model files: {string.Join(", ", Directory.GetFiles(model.ModelLocation))}");
-        }
-
-        var config = new PiperConfiguration
-        {
-            ExecutableLocation = Path.Combine(cwd, "piper", "piper.exe"),
-            WorkingDirectory = cwd,
-            Model = model
-        };
-
-        if (config.Model?.Files == null)
-            Console.WriteLine("[PiperTTS] ⚠️ WARNING: Model.Files is null!");
-
-        var provider = new PiperProvider(config);
-        _providers.TryAdd(modelKey, provider);
-
-        Console.WriteLine($"[PiperTTS] ✅ Provider created successfully for {modelKey}");
-        return provider;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[PiperTTS] ❌ ERROR: {ex.Message}\n{ex.StackTrace}");
-        return null;
-    }
-    finally
-    {
-        _downloadLock.Release();
-    }
-}// Helper lấy đường dẫn
-private string GetPiperBasePath()
-{
-    var assemblyDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-    if (assemblyDir == null) 
-        return Path.Combine(Directory.GetCurrentDirectory(), "piper_tts");
-
-    // Ưu tiên folder source (phù hợp dev)
-    var projectPath = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "..", "piper_tts"));
-    if (Directory.Exists(projectPath))
-        return projectPath;
-
-    // Fallback
-    return Path.Combine(assemblyDir, "piper_tts");
-}
     }
 }

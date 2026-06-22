@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, Suspense } from 'react'
+import { useTranslation } from '@/i18n';
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Header from '@/components/Layout/Header'
@@ -151,8 +152,9 @@ function MapPageContent() {
 }
 
 export default function MapPage() {
+  const t = useTranslation();
   return (
-    <Suspense fallback={<div className="h-screen bg-slate-900 flex items-center justify-center text-white">Đang tải bản đồ...</div>}>
+    <Suspense fallback={<div className="h-screen bg-slate-900 flex items-center justify-center text-white">{t.map.loading}</div>}>
       <MapPageContent />
     </Suspense>
   )

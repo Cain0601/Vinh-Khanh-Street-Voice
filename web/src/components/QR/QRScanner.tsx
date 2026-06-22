@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertCircle, Camera, Loader2, ScanLine, X } from 'lucide-react'
+import { useTranslation } from '@/i18n';
 
 interface QRScannerProps {
   isOpen: boolean
@@ -10,6 +11,7 @@ interface QRScannerProps {
 }
 
 export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
+  const t = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -62,7 +64,7 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
         }
       } catch (err) {
         if (cancelled) return
-        setError('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.')
+        setError(t.qrScanner.errorAccess)
         setScanning(false)
         setCameraReady(false)
         console.error('Camera error:', err)
@@ -86,17 +88,17 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/85 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-zinc-950 text-white shadow-2xl sm:h-[86dvh] sm:rounded-2xl">
+      <div className="flex h-dvh w-full max-w-107.5 flex-col overflow-hidden bg-zinc-950 text-white shadow-2xl sm:h-[86dvh] sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-white/10 bg-zinc-950/95 px-4 py-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-300">
-              QR scanner
+              {t.qrScanner.scannerLabel}
             </p>
-            <h2 className="text-lg font-semibold text-white">Quét mã QR</h2>
+            <h2 className="text-lg font-semibold text-white">{t.qrScanner.title}</h2>
           </div>
           <button
             onClick={handleClose}
-            aria-label="Đóng trình quét QR"
+            aria-label={t.qrScanner.closeAria}
             className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 active:scale-95"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -118,7 +120,7 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
 
           {!cameraReady && !error && (
             <div className="absolute inset-0 grid place-items-center bg-zinc-950">
-              <div className="flex max-w-[260px] flex-col items-center text-center">
+                <div className="flex max-w-65 flex-col items-center text-center">
                 <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
                   {scanning ? (
                     <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
@@ -126,21 +128,21 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
                     <Camera className="h-8 w-8" aria-hidden="true" />
                   )}
                 </div>
-                <p className="font-medium text-white">Đang khởi động camera...</p>
+                <p className="font-medium text-white">{t.qrScanner.loading}</p>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  Giữ điện thoại gần mã QR và cho phép trình duyệt dùng camera.
+                  {t.qrScanner.subtitle}
                 </p>
               </div>
             </div>
           )}
 
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-10">
-            <div className="relative aspect-square w-full max-w-[280px]">
-              <div className="absolute inset-0 rounded-[28px] border border-white/25 bg-white/[0.03] shadow-[0_0_70px_rgba(16,185,129,0.18)]" />
-              <div className="absolute left-0 top-0 h-14 w-14 rounded-tl-[28px] border-l-[4px] border-t-[4px] border-emerald-400" />
-              <div className="absolute right-0 top-0 h-14 w-14 rounded-tr-[28px] border-r-[4px] border-t-[4px] border-emerald-400" />
-              <div className="absolute bottom-0 left-0 h-14 w-14 rounded-bl-[28px] border-b-[4px] border-l-[4px] border-emerald-400" />
-              <div className="absolute bottom-0 right-0 h-14 w-14 rounded-br-[28px] border-b-[4px] border-r-[4px] border-emerald-400" />
+            <div className="relative aspect-square w-full max-w-70">
+              <div className="absolute inset-0 rounded-[28px] border border-white/25 bg-white/3 shadow-[0_0_70px_rgba(16,185,129,0.18)]" />
+              <div className="absolute left-0 top-0 h-14 w-14 rounded-tl-[28px] border-l-4 border-t-4 border-emerald-400" />
+              <div className="absolute right-0 top-0 h-14 w-14 rounded-tr-[28px] border-r-4 border-t-4 border-emerald-400" />
+              <div className="absolute bottom-0 left-0 h-14 w-14 rounded-bl-[28px] border-b-4 border-l-4 border-emerald-400" />
+              <div className="absolute bottom-0 right-0 h-14 w-14 rounded-br-[28px] border-b-4 border-r-4 border-emerald-400" />
               {cameraReady && (
                 <div className="absolute left-6 right-6 top-1/2 h-px bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.95)]" />
               )}
@@ -153,7 +155,7 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
                 <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-red-400/10 text-red-300">
                   <AlertCircle className="h-6 w-6" aria-hidden="true" />
                 </div>
-                <p className="font-semibold text-white">Không mở được camera</p>
+                <p className="font-semibold text-white">{t.qrScanner.errorTitle}</p>
                 <p className="mt-2 text-sm leading-6 text-red-100/80">{error}</p>
               </div>
             </div>
@@ -161,15 +163,15 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
         </div>
 
         <div className="border-t border-white/10 bg-zinc-950 px-4 py-4">
-          <div className="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-zinc-300">
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/4 px-3 py-3 text-sm text-zinc-300">
             <ScanLine className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
-            <span>Đưa mã QR vào giữa khung để hệ thống nhận diện.</span>
+            <span>{t.qrScanner.instruction}</span>
           </div>
           <button
             onClick={handleClose}
             className="h-11 w-full rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 active:scale-[0.99]"
           >
-            Đóng
+            {t.qrScanner.closeButton}
           </button>
         </div>
       </div>

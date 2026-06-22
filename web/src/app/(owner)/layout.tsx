@@ -1,23 +1,36 @@
-import '../globals.css'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-// import AuthGuard from '../components/AuthGuard'
+"use client";
 
-export const metadata = {
-  title: 'FoodTour - Owner',
-  description: 'Owner portal'
-}
+import { useEffect } from "react";
+import OwnerSidebar from "./components/OwnerSidebar";
+import OwnerTopbar from "./components/OwnerTopbar";
+import { useUserStore } from "@/store/userStore";
+import { useRouter } from "next/navigation";
 
-export default function OwnerLayout({ children }: { children: React.ReactNode }) {
+export default function OwnerLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { user, token } = useUserStore();
+  const router = useRouter();
+
+  // useEffect(() => {
+  //   if (!token || !user || (user.role !== "OWNER" && user.role !== "ADMIN")) {
+  //     router.push("/login");
+  //   }
+  // }, [token, user, router]);
+
+  // if (!token || !user) return null;
+
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-white text-slate-900">
-        <Header />
-        {/* <AuthGuard allowedRoles={["OWNER", "ADMIN"]}> */}
-          <main className="container py-8">{children}</main>
-        {/* </AuthGuard> */}
-        <Footer />
-      </body>
-    </html>
-  )
+    <div className="flex h-screen bg-gray-50/50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100">
+      <OwnerSidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <OwnerTopbar />
+        <main className="flex-1 overflow-y-auto bg-blue-50 p-8">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
 }

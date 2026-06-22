@@ -10,7 +10,7 @@ namespace FoodTour.Api.Repositories
 
         public UserRepository(Services.FirestoreService firestoreService)
         {
-            _db = firestoreService.Db;
+            _db = firestoreService.DbOrNull!;
         }
 
         public async Task<List<User>> GetAllAsync(int? limit = null, int? offset = null)

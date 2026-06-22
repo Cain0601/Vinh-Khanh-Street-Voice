@@ -13,7 +13,7 @@ namespace FoodTour.Api.Repositories
 
         public PoiRepository(Services.FirestoreService firestoreService)
         {
-            _db = firestoreService.Db;
+            _db = firestoreService.DbOrNull!;
         }
 
         /// <summary>
@@ -27,6 +27,18 @@ namespace FoodTour.Api.Repositories
 
             var list = ConvertSnapshotToPois(snapshot);
             return list.Where(p => string.Equals(p.Status, "approved", StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        
+        /// <summary>
+        /// Get all POIs without status filtering (admin use)
+        /// </summary>
+        public async Task<List<Poi>> GetAllUnfilteredAsync()
+        {
+            var snapshot = await _db.Collection(CollectionName)
+                .OrderByDescending("createdAt")
+                .GetSnapshotAsync();
+
+            return ConvertSnapshotToPois(snapshot);
         }
 
         /// <summary>

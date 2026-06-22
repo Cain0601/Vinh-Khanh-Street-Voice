@@ -16,11 +16,13 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useUserStore } from "@/store/userStore";
+import { Flame } from "lucide-react";
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/categories", label: "Danh mục", icon: FolderTree },
   { href: "/admin/pois", label: "Địa điểm", icon: MapPin },
+  { href: "/admin/heatmap", label: "Heatmap", icon: Flame },
   { href: "/admin/approvals", label: "Duyệt nội dung", icon: ShieldCheck },
   { href: "/admin/audit", label: "Nhật ký", icon: ScrollText },
   { href: "/admin/settings", label: "Cài đặt", icon: Settings },

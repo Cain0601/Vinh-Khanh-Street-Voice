@@ -22,16 +22,19 @@ namespace FoodTour.Api.Middleware
             "/api/categories"   // Public read for categories
         };
 
-        // Paths that always require auth
+        // Paths that always require auth — checked BEFORE PublicPaths
         private static readonly string[] AuthRequiredPrefixes = new[]
         {
             "/auth/me",
             "/auth/profile",
             "/owner/",
+            "/owners/",          // /owners/dashboard, /owners/analytics
             "/admin/",
             "/bookmarks",
             "/reviews",
-            "/analytics/"
+            "/analytics/",
+            "/menu-items/",      // /menu-items/owner/list, PUT/DELETE /menu-items/{id}
+            "/pois/owner",       // /pois/owner/list
         };
 
         public FirebaseAuthMiddleware(RequestDelegate next, ILogger<FirebaseAuthMiddleware> logger)
@@ -44,6 +47,24 @@ namespace FoodTour.Api.Middleware
         {
             var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
             var method = context.Request.Method;
+
+            // // Development shortcut: allow bypassing Firebase auth for local testing.
+            // // Send header `X-Dev-Bypass: owner` to impersonate an OWNER during development only.
+            // var isDevEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+            // var isDevMock = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DEV_FIRESTORE_MOCK"))
+            //                 && Environment.GetEnvironmentVariable("DEV_FIRESTORE_MOCK") == "true";
+
+            // if (isDevEnv || isDevMock)
+            // {
+            //     if (context.Request.Headers.TryGetValue("X-Dev-Bypass", out var bypass) && bypass == "owner")
+            //     {
+            //         context.Items["UserId"] = "dev-owner";
+            //         context.Items["UserRole"] = "OWNER";
+            //         context.Items["UserData"] = new Models.User { Id = "dev-owner", Role = "OWNER", IsActive = true, FullName = "Dev Owner" };
+            //         await _next(context);
+            //         return;
+            //     }
+            // }
 
             // Allow public GET endpoints without auth
             if (IsPublicEndpoint(path, method))
@@ -69,6 +90,23 @@ namespace FoodTour.Api.Middleware
 
             var token = authHeader.Substring("Bearer ".Length).Trim();
 
+            // // If Firebase Admin SDK is not initialized (missing service_account.json),
+            // // fall back to dev-owner in Development; block in Production.
+            // if (FirebaseApp.DefaultInstance == null)
+            // {
+            //     if (isDevEnv)
+            //     {
+            //         _logger.LogWarning("Firebase Admin SDK not initialized — auto-bypassing auth in Development mode.");
+            //         context.Items["UserId"]   = "dev-owner";
+            //         context.Items["UserRole"] = "OWNER";
+            //         context.Items["UserData"] = new Models.User { Id = "dev-owner", Role = "OWNER", IsActive = true, FullName = "Dev Owner (no creds)" };
+            //         await _next(context);
+            //         return;
+            //     }
+            //     await WriteUnauthorized(context, "Authentication service unavailable. Set GOOGLE_APPLICATION_CREDENTIALS on the server.");
+            //     return;
+            // }
+
             try
             {
                 // Verify Firebase ID token
@@ -79,34 +117,42 @@ namespace FoodTour.Api.Middleware
                 context.Items["FirebaseName"] = decodedToken.Claims.TryGetValue("name", out var name) ? name?.ToString() : "";
 
                 // Look up user in Firestore to get role
-                var firestoreService = context.RequestServices.GetRequiredService<Services.FirestoreService>();
-                var db = firestoreService.Db;
-
-                var usersRef = db.Collection("users");
-                var query = usersRef.WhereEqualTo("email", context.Items["FirebaseEmail"]?.ToString() ?? "").Limit(1);
-                var snapshot = await query.GetSnapshotAsync();
-
-                if (snapshot.Documents.Count > 0)
+                try
                 {
-                    var userDoc = snapshot.Documents[0];
-                    var userData = userDoc.ConvertTo<Models.User>();
-                    userData.Id = userDoc.Id;
+                    var firestoreService = context.RequestServices.GetRequiredService<Services.FirestoreService>();
+                    var db = firestoreService.Db;
 
-                    if (!userData.IsActive)
+                    var usersRef = db.Collection("users");
+                    var query = usersRef.WhereEqualTo("email", context.Items["FirebaseEmail"]?.ToString() ?? "").Limit(1);
+                    var snapshot = await query.GetSnapshotAsync();
+
+                    if (snapshot.Documents.Count > 0)
                     {
-                        await WriteForbidden(context, "Account is deactivated.");
-                        return;
-                    }
+                        var userDoc = snapshot.Documents[0];
+                        var userData = userDoc.ConvertTo<Models.User>();
+                        userData.Id = userDoc.Id;
 
-                    context.Items["UserId"] = userData.Id;
-                    context.Items["UserRole"] = userData.Role;
-                    context.Items["UserData"] = userData;
+                        if (!userData.IsActive)
+                        {
+                            await WriteForbidden(context, "Account is deactivated.");
+                            return;
+                        }
+
+                        context.Items["UserId"]   = userData.Id;
+                        context.Items["UserRole"] = userData.Role;
+                        context.Items["UserData"] = userData;
+                    }
+                    else
+                    {
+                        context.Items["UserId"]   = decodedToken.Uid;
+                        context.Items["UserRole"] = "USER";
+                    }
                 }
-                else
+                catch (Exception fsEx)
                 {
-                    // User exists in Firebase but not in Firestore yet
-                    // Allow access but with no role (auth/register will create the user)
-                    context.Items["UserId"] = "";
+                    // Firestore unavailable — set uid from Firebase token, allow request through
+                    _logger.LogWarning(fsEx, "Firestore lookup failed — using Firebase UID as UserId");
+                    context.Items["UserId"]   = decodedToken.Uid;
                     context.Items["UserRole"] = "USER";
                 }
 

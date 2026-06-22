@@ -25,6 +25,58 @@ namespace FoodTour.Api.Controllers
             _cloudinary = cloudinary;
         }
 
+        // ── NEW: GET /pois/owner/list ────────────────────────────────────────────
+        // Frontend: menu/page.tsx gọi /pois/owner/list?search=&status=all&page=1&limit=100
+        [HttpGet("/pois/owner/list")]
+        public async Task<IActionResult> GetOwnerPoisList(
+            [FromQuery] string? search = null,
+            [FromQuery] string status = "all",
+            [FromQuery] int page = 1,
+            [FromQuery] int limit = 10)
+        {
+            var userId = HttpContext.Items["UserId"]?.ToString();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { success = false, message = "Authentication required" });
+
+            var allPois = await _repo.GetByOwnerAsync(userId);
+
+            var filtered = status.ToLowerInvariant() switch
+            {
+                "active" => allPois.Where(p => p.IsActive).ToList(),
+                "hidden" => allPois.Where(p => !p.IsActive).ToList(),
+                _        => allPois
+            };
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.ToLowerInvariant();
+                filtered = filtered.Where(p =>
+                    (p.Title?.ToLowerInvariant().Contains(q) == true) ||
+                    (p.Summary?.ToLowerInvariant().Contains(q) == true) ||
+                    (p.Address?.ToLowerInvariant().Contains(q) == true)
+                ).ToList();
+            }
+
+            var total      = filtered.Count;
+            var totalPages = (int)Math.Ceiling(total / (double)limit);
+            var data = filtered
+                .Skip((page - 1) * limit).Take(limit)
+                .Select(p => new
+                {
+                    p.Id, p.OwnerId, p.Title, p.Summary, p.Address,
+                    p.Status, p.IsActive, p.Rating, p.ReviewCount,
+                    p.MediaUrls, p.CategoryId,
+                    translations = new[] { new { name = p.Title ?? "" } }
+                }).ToList();
+
+            return Ok(new
+            {
+                success = true,
+                data = new { data, pagination = new { page, limit, total, totalPages } }
+            });
+        }
+        // ── END NEW ─────────────────────────────────────────────────────────────────
+
         /// <summary>
         /// Get all approved POIs
         /// </summary>

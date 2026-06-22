@@ -13,7 +13,7 @@ namespace FoodTour.Api.Repositories
 
         public PoiRepository(Services.FirestoreService firestoreService)
         {
-            _db = firestoreService.Db;
+            _db = firestoreService.DbOrNull!;
         }
 
         /// <summary>

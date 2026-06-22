@@ -10,7 +10,7 @@ namespace FoodTour.Api.Repositories
 
         public BookmarkRepository(Services.FirestoreService firestoreService)
         {
-            _db = firestoreService.Db;
+            _db = firestoreService.DbOrNull!;
         }
 
         public async Task<List<Bookmark>> GetByUserIdAsync(string userId)

@@ -112,6 +112,7 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Configuration.AddJsonFile("appsettings.Firebase.json", optional: true, reloadOnChange: false);
 var app = builder.Build();
 
 // ─────────────────── Pipeline ───────────────────

@@ -11,6 +11,9 @@ export const analyticsApi = {
     const res = await api.get("/analytics/qr-stats");
     return res.data as QrStats;
   },
+  trackListen: (poiId: string) => api.post("/analytics/listen", { poiId }),
+  trackQrScan: (poiId: string) => api.post("/analytics/qr-scan", { poiId }),
+  trackView: (poiId: string) => api.post("/analytics/view", { poiId }),
 };
 
 export default analyticsApi;

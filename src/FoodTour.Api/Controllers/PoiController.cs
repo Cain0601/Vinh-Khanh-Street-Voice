@@ -9,19 +9,16 @@ namespace FoodTour.Api.Controllers
     public class PoiController : ControllerBase
     {
         private readonly PoiRepository _repo;
-        private readonly TranslationService _translation;
-        private readonly PiperTtsService _tts;
+        private readonly TtsManagerService _ttsManager;
         private readonly CloudinaryService _cloudinary;
         
         public PoiController(
             PoiRepository repo, 
-            TranslationService translation, 
-            PiperTtsService tts, 
+            TtsManagerService ttsManager, 
             CloudinaryService cloudinary)
         {
             _repo = repo;
-            _translation = translation;
-            _tts = tts;
+            _ttsManager = ttsManager;
             _cloudinary = cloudinary;
         }
 
@@ -99,55 +96,19 @@ namespace FoodTour.Api.Controllers
             
             if (!string.IsNullOrEmpty(lang))
             {
-                // Translate the English summary if available, else Vietnamese
-                var summaryToTranslate = "";
-                if (poi.Summary != null)
-                {
-                    summaryToTranslate = poi.Summary;
-                }
+                var originalTitle = poi.Title ?? "";
+                var originalSummary = poi.Summary ?? "";
 
-                if (poi.Title != null)
-                {
-                    var titleToTranslate = poi.Title;
-                    var translatedTitle = await _translation.TranslateAsync(titleToTranslate, lang);
-                    Console.WriteLine($"[PoiController] Translated Title for lang={lang}: {translatedTitle}");
-                    poi.Title = translatedTitle;
-                }
-
-                if (!string.IsNullOrEmpty(summaryToTranslate))
-                {
-                    var translated = await _translation.TranslateAsync(summaryToTranslate, lang);
-                    Console.WriteLine($"[PoiController] Translated text for lang={lang}: {translated}");
-                    poi.Summary = translated;
-
-                    // Generate TTS
-                    var audioData = await _tts.GenerateSpeechAsync(translated, lang);
-                    if (audioData != null)
-                    {
-                        Console.WriteLine($"[PoiController] TTS generated audio for lang={lang}, bytes={audioData.Length}");
-                        poi.AudioUrl = $"data:audio/wav;base64,{Convert.ToBase64String(audioData)}";
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[PoiController] TTS did not produce audio for lang={lang} (audioData is null)");
-                    }
-
-                    // // Persist the translation and audio URLs back to Firestore so subsequent reads include them
-                    // try
-                    // {
-                    //     var updates = new Dictionary<string, object>
-                    //     {
-                    //         { "summary", poi.Summary },
-                    //         { "audioUrls", poi.AudioUrls }
-                    //     };
-                    //     await _repo.UpdateFieldsAsync(id, updates);
-                    //     Console.WriteLine($"[PoiController] Persisted summary and audioUrls for POI {id}.");
-                    // }
-                    // catch (Exception ex)
-                    // {
-                    //     Console.WriteLine($"[PoiController] Failed to persist translation/audio for POI {id}: {ex.Message}");
-                    // }
-                }
+                var result = await _ttsManager.ProcessPoiContentAsync(id, originalTitle, originalSummary, lang);
+                
+                if (!string.IsNullOrEmpty(result.TranslatedTitle))
+                    poi.Title = result.TranslatedTitle;
+                
+                if (!string.IsNullOrEmpty(result.TranslatedText))
+                    poi.Summary = result.TranslatedText;
+                
+                if (!string.IsNullOrEmpty(result.AudioUrl))
+                    poi.AudioUrl = result.AudioUrl;
             }
 
             return Ok(new { success = true, data = poi });
@@ -208,6 +169,10 @@ namespace FoodTour.Api.Controllers
 
             poi.Id = id;
             var updated = await _repo.UpdateAsync(id, poi);
+
+            // Invalidate TTS cache since the text might have changed
+            await _ttsManager.InvalidateCacheAsync(id);
+
             return Ok(new { success = true, data = updated });
         }
 
@@ -223,6 +188,10 @@ namespace FoodTour.Api.Controllers
 
             await _repo.UpdateFieldsAsync(id, updates);
             var updated = await _repo.GetByIdAsync(id);
+
+            // Invalidate TTS cache since the text might have changed
+            await _ttsManager.InvalidateCacheAsync(id);
+
             return Ok(new { success = true, data = updated });
         }
 

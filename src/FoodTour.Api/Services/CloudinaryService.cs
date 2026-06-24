@@ -50,5 +50,46 @@ namespace FoodTour.Api.Services
 
             return uploadResult.SecureUrl.ToString();
         }
+
+        public async Task<string?> UploadAudioAsync(byte[] audioBytes, string fileName, string? folder = null)
+        {
+            if (_cloudinary == null)
+                throw new InvalidOperationException("Cloudinary is disabled.");
+
+            if (audioBytes == null || audioBytes.Length == 0) return null;
+
+            using var stream = new System.IO.MemoryStream(audioBytes);
+            
+            // Tạo PublicId có folder
+            string publicId;
+            
+            if (!string.IsNullOrEmpty(folder))
+            {
+                publicId = $"{folder.TrimEnd('/')}/{System.IO.Path.GetFileNameWithoutExtension(fileName)}";
+            }
+            else
+            {
+                publicId = System.IO.Path.GetFileNameWithoutExtension(fileName);
+            }
+
+            var uploadParams = new VideoUploadParams()
+            {
+                File = new FileDescription(fileName, stream),
+                PublicId = publicId,
+                UseFilename = true,
+                UniqueFilename = false,
+                Overwrite = true,
+                // ResourceType = ResourceType.Video
+            };
+
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+            if (uploadResult.Error != null)
+            {
+                throw new Exception(uploadResult.Error.Message);
+            }
+
+            return uploadResult.SecureUrl.ToString();
+        }
     }
 }

@@ -87,7 +87,7 @@ export const resolvePostAuthRoute = (profile?: Pick<AuthUserProfile, "role" | "i
     case "ADMIN":
       return "/admin/dashboard";
     case "OWNER":
-      return "/owner/pois";
+      return "/owner";
     default:
       return "/home";
   }

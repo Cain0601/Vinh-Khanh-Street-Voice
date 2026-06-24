@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
+import { HubConnectionBuilder, LogLevel, HubConnection } from "@microsoft/signalr";
 import { getHeatmapData } from "@/lib/adminApi";
-import { Flame, MapPin } from "lucide-react";
+import { Flame, MapPin, Users } from "lucide-react";
 
 const HeatmapMap = dynamic(() => import("./HeatmapMap"), {
   ssr: false,
@@ -21,9 +22,19 @@ export type HeatPoint = {
   intensity: number;
 };
 
+export type LiveUser = {
+  userId: string;
+  fullName: string;
+  lat: number;
+  lng: number;
+  timestamp: string;
+};
+
 export default function AdminHeatmapPage() {
   const [points, setPoints] = useState<HeatPoint[]>([]);
+  const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -32,6 +43,44 @@ export default function AdminHeatmapPage() {
       if (res.success) setPoints(Array.isArray(res.data) ? res.data : []);
       setLoading(false);
     })();
+
+    // SignalR Setup
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("ft_token="))
+      ?.split("=")[1];
+
+    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+    const conn = new HubConnectionBuilder()
+      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .configureLogging(LogLevel.Information)
+      .withAutomaticReconnect()
+      .build();
+
+    conn.on("UserLocationUpdated", (data: LiveUser) => {
+      setLiveUsers((prev) => {
+        const existing = prev.findIndex(u => u.userId === data.userId);
+        if (existing >= 0) {
+          const newUsers = [...prev];
+          newUsers[existing] = data;
+          return newUsers;
+        }
+        return [...prev, data];
+      });
+    });
+
+    conn.on("UserDisconnected", (userId: string) => {
+      setLiveUsers((prev) => prev.filter(u => u.userId !== userId));
+    });
+
+    conn.start().then(() => {
+      console.log("Connected to LocationHub as Admin");
+      connectionRef.current = conn;
+    }).catch(err => console.error("SignalR Connection Error: ", err));
+
+    return () => {
+      conn.stop();
+    };
   }, []);
 
   const maxIntensity = Math.max(1, ...points.map((p) => p.intensity));
@@ -58,7 +107,7 @@ export default function AdminHeatmapPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 rounded-2xl overflow-hidden border border-white/[0.06]">
-            <HeatmapMap points={points} maxIntensity={maxIntensity} />
+            <HeatmapMap points={points} maxIntensity={maxIntensity} liveUsers={liveUsers} />
           </div>
 
           <div className="rounded-2xl bg-secondary/50 border border-white/[0.06] p-5">

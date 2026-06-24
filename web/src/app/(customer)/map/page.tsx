@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo, Suspense } from 'react'
+import { useState, useMemo, Suspense, useEffect, useRef } from 'react'
 import { useTranslation } from '@/i18n';
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr'
 import Header from '@/components/Layout/Header'
 import MapFilters from '@/components/Map/MapFilters'
 import RestaurantList from '@/components/Map/RestaurantList'
@@ -11,6 +12,7 @@ import PoiAudioDrawer from '@/components/Map/PoiAudioDrawer'
 import { usePoiAudioQueue } from '@/hooks/usePoiAudioQueue'
 
 const MapView = dynamic(() => import('@/components/Map/MapView'), { ssr: false, loading: () => <div className="h-80 bg-slate-800" /> })
+
 
 // Mock data - replace with API call
 const mockRestaurants = [
@@ -83,6 +85,52 @@ function MapPageContent() {
   const [showList, setShowList] = useState(!!initialSearch)
 
   const { currentPoi, queue, currentIndex, isPlaying, audioRef, currentTime, duration, enqueue, skip, play, pause, clearQueue } = usePoiAudioQueue();
+
+  const connectionRef = useRef<HubConnection | null>(null);
+
+  useEffect(() => {
+    // 1. Setup SignalR
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("ft_token="))
+      ?.split("=")[1];
+
+    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+
+    const conn = new HubConnectionBuilder()
+      .withUrl(hubUrl, {
+        accessTokenFactory: () => token || ""
+      })
+      .configureLogging(LogLevel.Information)
+      .withAutomaticReconnect()
+      .build();
+
+    conn.start().then(() => {
+      console.log("Connected to LocationHub");
+      connectionRef.current = conn;
+    }).catch(err => console.error("SignalR Connection Error: ", err));
+
+    // 2. Watch Location
+    let watchId: number;
+    if ("geolocation" in navigator) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          if (connectionRef.current?.state === "Connected") {
+            connectionRef.current.invoke("SendLocation", latitude, longitude)
+              .catch(err => console.error("Error sending location: ", err));
+          }
+        },
+        (error) => console.error("Geolocation error:", error),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+      );
+    }
+
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      conn.stop();
+    };
+  }, []);
 
   // Filter restaurants based on search and category
   const filteredRestaurants = useMemo(() => {

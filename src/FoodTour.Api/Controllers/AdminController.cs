@@ -50,13 +50,13 @@ namespace FoodTour.Api.Controllers
             var offset = (page - 1) * pageSize;
             var users = await _userRepo.GetAllAsync(limit: pageSize, offset: offset);
 
-            return Ok(new PaginatedResponse<User>
+            return Ok(ApiResponse.Ok(new
             {
-                Data = users,
-                Total = total,
-                Page = page,
-                PageSize = pageSize
-            });
+                data = users,
+                total = total,
+                page = page,
+                pageSize = pageSize
+            }));
         }
 
         /// <summary>
@@ -353,13 +353,13 @@ namespace FoodTour.Api.Controllers
             var offset = (page - 1) * pageSize;
             var logs = await _auditRepo.GetAllAsync(limit: pageSize, offset: offset);
 
-            return Ok(new PaginatedResponse<AuditLog>
+            return Ok(ApiResponse.Ok(new
             {
-                Data = logs,
-                Total = total,
-                Page = page,
-                PageSize = pageSize
-            });
+                data = logs,
+                total = total,
+                page = page,
+                pageSize = pageSize
+            }));
         }
 
         // ──────────────────── ANALYTICS ────────────────────

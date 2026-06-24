@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { getAdminUsers, changeUserRole, changeUserStatus, deleteUser } from "@/lib/adminApi";
+import { useUserStore } from "@/store/userStore";
 import { cn } from "@/lib/cn";
 import {
   Users,
@@ -28,6 +29,7 @@ type User = {
   createdAt?: any;
 };
 export default function AdminUsersPage() {
+  const currentUser = useUserStore((state) => state.user);
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -59,6 +61,11 @@ export default function AdminUsersPage() {
       )
     : users;
   async function handleRoleChange(userId: string, newRole: string) {
+    if (currentUser?.id === userId && newRole !== "ADMIN") {
+      if (!confirm("CẢNH BÁO: Bạn đang tự hạ cấp tài khoản của chính mình. Bạn sẽ bị ĐĂNG XUẤT và mất quyền Admin ngay lập tức. Chắc chắn tiếp tục?")) return;
+    } else {
+      if (!confirm(`Bạn có chắc chắn muốn đổi vai trò người dùng này thành ${newRole}?`)) return;
+    }
     setActionLoading(true);
     const res = await changeUserRole(userId, newRole);
     if (res.success) {
@@ -68,6 +75,11 @@ export default function AdminUsersPage() {
     setActionLoading(false);
   }
   async function handleStatusToggle(userId: string, currentActive: boolean) {
+    if (currentUser?.id === userId && currentActive) {
+      if (!confirm("CẢNH BÁO: Bạn đang tự khóa tài khoản của chính mình. Bạn sẽ bị ĐĂNG XUẤT ngay lập tức. Chắc chắn tiếp tục?")) return;
+    } else {
+      if (!confirm(`Bạn có chắc chắn muốn ${currentActive ? 'khóa' : 'mở khóa'} tài khoản người dùng này?`)) return;
+    }
     setActionLoading(true);
     const res = await changeUserStatus(userId, !currentActive);
     if (res.success) await load();

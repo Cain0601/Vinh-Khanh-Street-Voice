@@ -41,6 +41,7 @@ builder.Services.AddSingleton<PiperTtsService>();
 builder.Services.AddSingleton<CloudinaryService>();
 
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -59,19 +60,37 @@ builder.Services.AddSwaggerGen();
     {
         try
         {
-            FirebaseApp.Create(new AppOptions
+            GoogleCredential credential;
+
+            // 1. Try service_account.json in project root (local dev)
+            var serviceAccountPath = Path.Combine(AppContext.BaseDirectory, "service_account.json");
+            var localPath = Path.Combine(Directory.GetCurrentDirectory(), "service_account.json");
+
+            if (File.Exists(localPath))
             {
-                Credential = GoogleCredential.GetApplicationDefault()
-            });
+                credential = GoogleCredential.FromFile(localPath);
+                Console.WriteLine("✅ Firebase Admin: using local service_account.json");
+            }
+            else if (File.Exists(serviceAccountPath))
+            {
+                credential = GoogleCredential.FromFile(serviceAccountPath);
+                Console.WriteLine("✅ Firebase Admin: using service_account.json from bin dir");
+            }
+            else
+            {
+                // 2. Fallback to GOOGLE_APPLICATION_CREDENTIALS / gcloud default
+                credential = GoogleCredential.GetApplicationDefault();
+                Console.WriteLine("✅ Firebase Admin: using Application Default Credentials");
+            }
+
+            FirebaseApp.Create(new AppOptions { Credential = credential });
             Console.WriteLine("✅ Firebase Admin SDK initialized.");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"⚠️  Firebase Admin SDK init failed: {ex.Message}");
-            // useDevMock = true;
         }
     }
-// }
 
 // Firestore — always register so Repositories can resolve it.
 // FirestoreService will hold a null Db when credentials are missing;
@@ -129,6 +148,7 @@ app.UseFirebaseAuth();
 // 4. Routing + Controllers
 app.UseRouting();
 app.MapControllers();
+app.MapHub<FoodTour.Api.Hubs.LocationHub>("/hubs/location");
 
 // 5. Swagger (all environments for convenience)
 app.MapOpenApi();
@@ -139,7 +159,7 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-// 6. (Health handled by HealthController at GET /health)
+// Note: /health is handled by HealthController
 
 // ─────────────────── DB Init ───────────────────
 

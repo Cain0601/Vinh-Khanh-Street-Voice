@@ -40,6 +40,10 @@ export async function rejectModerationRequest(id: string, reason?: string) {
 }
 
 // ─── Admin Categories ───
+export async function getAdminCategories() {
+  return api.get<any>("/admin/categories");
+}
+
 export async function createCategory(data: any) {
   return api.post<any>("/admin/categories", data);
 }
@@ -93,4 +97,13 @@ export async function updatePoiStatus(id: string, status: string) {
 
 export async function deleteAdminPoi(id: string) {
   return api.del<any>(`/admin/pois/${id}`);
+}
+
+// ─── System Settings ───
+export async function getSystemSettings() {
+  return api.get<any>("/admin/settings");
+}
+
+export async function updateSystemSettings(data: any) {
+  return api.put<any>("/admin/settings", data);
 }

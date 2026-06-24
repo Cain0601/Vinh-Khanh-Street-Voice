@@ -1,8 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertCircle, Camera, Loader2, ScanLine, X } from 'lucide-react'
+import { AlertCircle, Camera, Loader2, ScanLine, X, Image as ImageIcon } from 'lucide-react'
+import { Html5Qrcode } from 'html5-qrcode'
 import { useTranslation } from '@/i18n';
+import { useRouter } from 'next/navigation';
+import { analyticsApi } from '@/lib/api/analytics';
 
 interface QRScannerProps {
   isOpen: boolean
@@ -10,77 +13,125 @@ interface QRScannerProps {
   onScan?: (data: string) => void
 }
 
-export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
+export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
   const t = useTranslation();
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
+  
   const [error, setError] = useState<string | null>(null)
-  const [scanning, setScanning] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
   const [cameraReady, setCameraReady] = useState(false)
 
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
+  const scannerRef = useRef<Html5Qrcode | null>(null)
+  const isStoppingRef = useRef(false)
+  const router = useRouter();
 
-    if (videoRef.current) {
-      videoRef.current.pause()
-      videoRef.current.srcObject = null
+  // Dừng scanner
+  const stopScanner = useCallback(async () => {
+    if (isStoppingRef.current || !scannerRef.current) {
+      setIsScanning(false)
+      setCameraReady(false)
+      return
     }
 
-    setScanning(false)
-    setCameraReady(false)
+    isStoppingRef.current = true
+    try {
+      if (scannerRef.current.getState() > 1) {
+        await scannerRef.current.stop()
+      }
+      try {
+        await scannerRef.current.clear()
+      } catch {}
+    } catch (err) {
+      console.warn('Error stopping scanner:', err)
+    } finally {
+      scannerRef.current = null
+      isStoppingRef.current = false
+      setIsScanning(false)
+      setCameraReady(false)
+    }
   }, [])
 
+  // Xử lý khi quét thành công
+  const handleScanSuccess = useCallback(async (decodedText: string) => {
+    console.log('Scanned:', decodedText)
+    const poiMatch = decodedText.match(/\/poi\/([a-f0-9-]{36})/i);
+    
+    if (poiMatch) {
+      const poiId = poiMatch[1];
+      await stopScanner();
+      // triggerSuccessEffect();
+      
+      // Track QR scan event
+      // void analyticsApi.reportQrScan(poiId, 'app');
+      
+      setTimeout(() => {
+        onClose();
+        router.push(`/pois/${poiId}`);
+      }, 1000);
+    } else {
+      // setError(t.qrScanner.invalidQr);
+    }
+  }, [onScan, stopScanner, onClose])
+
+  // Khởi động scanner
   useEffect(() => {
-    if (!isOpen) return
+    let active = true
 
-    let cancelled = false
+    const startScanner = async () => {
+      if (!isOpen) return
+      await stopScanner()
+      if (!active) return
 
-    const startCamera = async () => {
+      const html5QrCode = new Html5Qrcode('qr-reader')
+      scannerRef.current = html5QrCode
+
+      setIsScanning(true)
+      setError(null)
+
       try {
-        setError(null)
-        setCameraReady(false)
-        setScanning(true)
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        })
-
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop())
-          return
-        }
-
-        streamRef.current = stream
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          await videoRef.current.play().catch(() => undefined)
-          setCameraReady(true)
-        }
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 12, qrbox: { width: 280, height: 280 } },
+          handleScanSuccess,
+          () => {} // error callback (im lặng)
+        )
+        setCameraReady(true)
       } catch (err) {
-        if (cancelled) return
-        setError(t.qrScanner.errorAccess)
-        setScanning(false)
-        setCameraReady(false)
-        console.error('Camera error:', err)
+        if (active) {
+          setError(t.qrScanner.errorAccess || 'Không thể mở camera')
+          setIsScanning(false)
+        }
       }
     }
 
-    startCamera()
-
-    return () => {
-      cancelled = true
-      stopCamera()
+    if (isOpen) {
+      const timer = setTimeout(startScanner, 300)
+      return () => {
+        active = false
+        clearTimeout(timer)
+        stopScanner()
+      }
+    } else {
+      stopScanner()
     }
-  }, [isOpen, stopCamera])
+  }, [isOpen, stopScanner, handleScanSuccess, t])
+
+  // === PHẦN MỞ FOLDER CHỌN ẢNH ===
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+
+    const imageFile = e.target.files[0]
+    const html5QrCode = new Html5Qrcode('qr-reader')
+
+    try {
+      const result = await html5QrCode.scanFile(imageFile, true)
+      await handleScanSuccess(result)
+    } catch (err) {
+      setError(t.qrScanner.noQrFound || 'Không tìm thấy mã QR trong ảnh này')
+    }
+  }
 
   const handleClose = () => {
-    stopCamera()
+    stopScanner()
     onClose()
   }
 
@@ -89,6 +140,8 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/85 p-0 backdrop-blur-sm sm:items-center sm:p-4">
       <div className="flex h-dvh w-full max-w-107.5 flex-col overflow-hidden bg-zinc-950 text-white shadow-2xl sm:h-[86dvh] sm:rounded-2xl">
+        
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-zinc-950/95 px-4 py-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-emerald-300">
@@ -96,80 +149,71 @@ export default function QRScanner({ isOpen, onClose }: QRScannerProps) {
             </p>
             <h2 className="text-lg font-semibold text-white">{t.qrScanner.title}</h2>
           </div>
-          <button
-            onClick={handleClose}
-            aria-label={t.qrScanner.closeAria}
-            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-zinc-200 transition hover:bg-white/10 active:scale-95"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
+          <button onClick={handleClose} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="relative flex-1 overflow-hidden bg-black">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            className={`h-full w-full object-cover transition-opacity duration-300 ${
-              cameraReady ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
+        {/* Scanner Area */}
+        <div className="relative flex-1 bg-black overflow-hidden">
+          <div id="qr-reader" className="h-full w-full" />
 
+          {/* Overlay */}
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,transparent_34%,rgba(0,0,0,0.58)_35%,rgba(0,0,0,0.78)_100%)]" />
 
           {!cameraReady && !error && (
             <div className="absolute inset-0 grid place-items-center bg-zinc-950">
-                <div className="flex max-w-65 flex-col items-center text-center">
-                <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
-                  {scanning ? (
-                    <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Camera className="h-8 w-8" aria-hidden="true" />
-                  )}
-                </div>
-                <p className="font-medium text-white">{t.qrScanner.loading}</p>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  {t.qrScanner.subtitle}
-                </p>
+              <div className="flex flex-col items-center text-center">
+                <Loader2 className="h-10 w-10 animate-spin text-emerald-400 mb-4" />
+                <p className="text-white font-medium">{t.qrScanner.loading}</p>
               </div>
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-10">
-            <div className="relative aspect-square w-full max-w-70">
-              <div className="absolute inset-0 rounded-[28px] border border-white/25 bg-white/3 shadow-[0_0_70px_rgba(16,185,129,0.18)]" />
-              <div className="absolute left-0 top-0 h-14 w-14 rounded-tl-[28px] border-l-4 border-t-4 border-emerald-400" />
-              <div className="absolute right-0 top-0 h-14 w-14 rounded-tr-[28px] border-r-4 border-t-4 border-emerald-400" />
-              <div className="absolute bottom-0 left-0 h-14 w-14 rounded-bl-[28px] border-b-4 border-l-4 border-emerald-400" />
-              <div className="absolute bottom-0 right-0 h-14 w-14 rounded-br-[28px] border-b-4 border-r-4 border-emerald-400" />
-              {cameraReady && (
-                <div className="absolute left-6 right-6 top-1/2 h-px bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.95)]" />
-              )}
+          {/* Khung scanner */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-8">
+            <div className="relative aspect-square w-full max-w-[280px]">
+              <div className="absolute inset-0 rounded-3xl border-2 border-emerald-400/60" />
+              <div className="absolute left-0 top-0 h-12 w-12 rounded-tl-3xl border-l-4 border-t-4 border-emerald-400" />
+              <div className="absolute right-0 top-0 h-12 w-12 rounded-tr-3xl border-r-4 border-t-4 border-emerald-400" />
+              <div className="absolute bottom-0 left-0 h-12 w-12 rounded-bl-3xl border-l-4 border-b-4 border-emerald-400" />
+              <div className="absolute bottom-0 right-0 h-12 w-12 rounded-br-3xl border-r-4 border-b-4 border-emerald-400" />
             </div>
           </div>
 
           {error && (
-            <div className="absolute inset-0 grid place-items-center bg-zinc-950/95 p-6">
-              <div className="max-w-sm rounded-2xl border border-red-400/20 bg-red-950/70 p-5 text-center shadow-2xl">
-                <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-red-400/10 text-red-300">
-                  <AlertCircle className="h-6 w-6" aria-hidden="true" />
-                </div>
-                <p className="font-semibold text-white">{t.qrScanner.errorTitle}</p>
-                <p className="mt-2 text-sm leading-6 text-red-100/80">{error}</p>
+            <div className="absolute inset-0 grid place-items-center bg-black/90 p-6">
+              <div className="text-center">
+                <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+                <p className="text-white font-medium mb-2">{error}</p>
+                <button 
+                  onClick={() => setError(null)}
+                  className="mt-4 px-6 py-2.5 bg-white text-zinc-900 rounded-2xl font-semibold"
+                >
+                  Thử lại
+                </button>
               </div>
             </div>
           )}
         </div>
 
-        <div className="border-t border-white/10 bg-zinc-950 px-4 py-4">
-          <div className="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/4 px-3 py-3 text-sm text-zinc-300">
-            <ScanLine className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
-            <span>{t.qrScanner.instruction}</span>
-          </div>
+        {/* Bottom Section */}
+        <div className="border-t border-white/10 bg-zinc-950 p-4 space-y-3">
+          {/* Nút mở folder chọn ảnh */}
+          <label className="flex items-center justify-center gap-3 w-full h-12 bg-white/10 hover:bg-white/15 rounded-2xl font-medium text-white cursor-pointer active:scale-[0.98] transition-all">
+            <ImageIcon className="w-5 h-5" />
+            <span>{t.qrScanner.chooseFromGallery || 'Chọn ảnh từ thư viện'}</span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={onFileChange} 
+            />
+          </label>
+
           <button
             onClick={handleClose}
-            className="h-11 w-full rounded-xl bg-white text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 active:scale-[0.99]"
+            className="h-11 w-full rounded-2xl bg-white text-zinc-950 font-semibold hover:bg-zinc-200 active:scale-[0.99]"
           >
             {t.qrScanner.closeButton}
           </button>

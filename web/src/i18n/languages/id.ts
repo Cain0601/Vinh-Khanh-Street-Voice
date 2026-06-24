@@ -108,6 +108,8 @@ const id = {
     errorAccess: "Tidak dapat mengakses kamera. Periksa izin.",
     errorTitle: "Tidak dapat membuka kamera",
     instruction: "Letakkan kode QR di tengah bingkai untuk dipindai",
+    noQrFound: "Tidak menemukan kode QR. Silakan coba lagi.",
+    chooseFromGallery: "Pilih dari Galeri",
     closeButton: "Tutup",
   },
   auth: {

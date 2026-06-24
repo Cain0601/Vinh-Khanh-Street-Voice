@@ -108,6 +108,8 @@ const it = {
     errorAccess: "Impossibile accedere alla fotocamera. Controlla i permessi.",
     errorTitle: "Impossibile aprire la fotocamera",
     instruction: "Posiziona il codice QR al centro del riquadro",
+    noQrFound: "Nessun codice QR trovato. Per favore riprova.",
+    chooseFromGallery: "Scegli dalla galleria",
     closeButton: "Chiudi",
   },
   auth: {

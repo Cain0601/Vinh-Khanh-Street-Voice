@@ -108,6 +108,8 @@ const zh = {
     errorAccess: "无法访问相机。请检查权限。",
     errorTitle: "无法打开相机",
     instruction: "将二维码置于框中央进行扫描",
+    noQrFound: "未找到二维码。请重试。",
+    chooseFromGallery: "从相册中选择",
     closeButton: "关闭",
   },
   auth: {

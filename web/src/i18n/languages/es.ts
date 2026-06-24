@@ -108,6 +108,8 @@ const es = {
     errorAccess: "No se puede acceder a la cámara. Verifica los permisos.",
     errorTitle: "No se pudo abrir la cámara",
     instruction: "Coloca el código QR en el centro del marco para escanear.",
+    noQrFound: "No se encontró código QR. Por favor, inténtalo de nuevo.",
+    chooseFromGallery: "Elegir de la galería",
     closeButton: "Cerrar",
   },
   auth: {

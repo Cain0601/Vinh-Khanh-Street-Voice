@@ -108,6 +108,8 @@ const ar = {
     errorAccess: "لا يمكن الوصول إلى الكاميرا. يرجى التحقق من الأذونات.",
     errorTitle: "لا يمكن فتح الكاميرا",
     instruction: "ضع رمز QR في وسط الإطار للمسح",
+    noQrFound: "لم يتم العثور على رمز QR. يرجى المحاولة مرة أخرى.",
+    chooseFromGallery: "اختر من المعرض",
     closeButton: "إغلاق",
   },
   auth: {

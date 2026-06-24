@@ -108,6 +108,8 @@ const de = {
     errorAccess: "Kamera kann nicht zugreifen. Bitte überprüfen Sie die Berechtigungen.",
     errorTitle: "Kamera konnte nicht geöffnet werden",
     instruction: "Platzieren Sie den QR-Code in der Mitte des Rahmens",
+    noQrFound: "Kein QR-Code gefunden. Bitte versuchen Sie es erneut.",
+    chooseFromGallery: "Aus Galerie auswählen",
     closeButton: "Schließen",
   },
   auth: {

@@ -107,6 +107,8 @@ const vi = {
     errorAccess: "Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.",
     errorTitle: "Không thể mở camera",
     instruction: "Đặt mã QR vào giữa khung để quét",
+    noQrFound: "Không tìm thấy mã QR. Vui lòng thử lại.",
+    chooseFromGallery: "Chọn ảnh từ thư viện",
     closeButton: "Đóng",
   },
   auth: {

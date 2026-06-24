@@ -108,6 +108,8 @@ const hi = {
     errorAccess: "कैमरा एक्सेस नहीं हो सका। कृपया अनुमतियां जांचें।",
     errorTitle: "कैमरा नहीं खुल सका",
     instruction: "QR कोड को केंद्र में रखकर स्कैन करें",
+    noQrFound: "QR कोड नहीं मिला। कृपया पुनः प्रयास करें।",
+    chooseFromGallery: "गैलरी से चुनें",
     closeButton: "बंद करें",
   },
   auth: {

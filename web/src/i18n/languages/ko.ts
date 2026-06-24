@@ -108,6 +108,8 @@ const ko = {
     errorAccess: "카메라에 접근할 수 없습니다. 권한을 확인해주세요.",
     errorTitle: "카메라를 열 수 없습니다",
     instruction: "QR 코드를 중앙 프레임에 맞춰주세요",
+    noQrFound: "QR 코드를 찾을 수 없습니다. 다시 시도해주세요.",
+    chooseFromGallery: "갤러리에서 선택",
     closeButton: "닫기",
   },
   auth: {

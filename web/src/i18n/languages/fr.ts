@@ -108,6 +108,8 @@ const fr = {
     errorAccess: "Impossible d'accéder à la caméra. Veuillez vérifier les permissions.",
     errorTitle: "Impossible d'ouvrir la caméra",
     instruction: "Placez le code QR au centre du cadre pour scanner.",
+    noQrFound: "Aucun code QR trouvé. Veuillez réessayer.",
+    chooseFromGallery: "Choisir depuis la galerie",
     closeButton: "Fermer",
   },
   auth: {

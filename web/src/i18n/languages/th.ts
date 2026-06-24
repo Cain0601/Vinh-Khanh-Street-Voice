@@ -108,6 +108,8 @@ const th = {
     errorAccess: "ไม่สามารถเข้าถึงกล้องได้ กรุณาตรวจสอบสิทธิ์",
     errorTitle: "ไม่สามารถเปิดกล้องได้",
     instruction: "วางรหัส QR ตรงกลางกรอบเพื่อสแกน",
+    noQrFound: "ไม่พบรหัส QR. กรุณาลองอีกครั้ง.",
+    chooseFromGallery: "เลือกจากคลังภาพ",
     closeButton: "ปิด",
   },
   auth: {

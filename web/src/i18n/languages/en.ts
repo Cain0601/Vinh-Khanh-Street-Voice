@@ -107,6 +107,8 @@ const en = {
     errorAccess: "Unable to access camera. Please check permissions.",
     errorTitle: "Unable to open camera",
     instruction: "Position the QR code in the center of the frame to scan",
+    noQrFound: "No QR code found. Please try again.",
+    chooseFromGallery: "Choose from Gallery",
     closeButton: "Close",
   },
   auth: {

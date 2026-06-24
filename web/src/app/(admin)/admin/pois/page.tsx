@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { getCategories } from "@/lib/api";
 import {
@@ -23,6 +24,19 @@ import {
   Check,
   Save,
 } from "lucide-react";
+// ── Load MapPicker client-side only (Leaflet is browser-only) ──
+const MapPicker = dynamic(() => import("@/components/MapPicker"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[280px] rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-center">
+      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+        <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        Đang tải bản đồ...
+      </div>
+    </div>
+  ),
+});
+type LatLng = { lat: number; lng: number };
 type Poi = {
   id: string;
   title?: string;
@@ -37,9 +51,19 @@ type Poi = {
   mediaUrls?: string[];
   description?: Record<string, string>;
   audioUrl?: string;
-  location?: { latitude: number; longitude: number };
+  location?: { latitude?: number; longitude?: number; _latitude?: number; _longitude?: number };
 };
-const emptyPoi = (): Partial<Poi> => ({
+type FormState = {
+  title: string;
+  summary: string;
+  address: string;
+  categoryId: string;
+  status: string;
+  isActive: boolean;
+  description: { vi: string; en: string };
+  location?: LatLng;
+};
+const emptyForm = (): FormState => ({
   title: "",
   summary: "",
   address: "",
@@ -47,7 +71,15 @@ const emptyPoi = (): Partial<Poi> => ({
   status: "approved",
   isActive: true,
   description: { vi: "", en: "" },
+  location: undefined,
 });
+const getPoiLatLng = (poi: Poi): LatLng | undefined => {
+  if (!poi.location) return undefined;
+  const lat = poi.location.latitude ?? poi.location._latitude;
+  const lng = poi.location.longitude ?? poi.location._longitude;
+  if (lat !== undefined && lng !== undefined) return { lat, lng };
+  return undefined;
+};
 export default function AdminPoisPage() {
   const [pois, setPois] = useState<Poi[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -58,7 +90,7 @@ export default function AdminPoisPage() {
   // Form state
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Poi>>(emptyPoi());
+  const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   async function load() {
     setLoading(true);
@@ -113,7 +145,7 @@ export default function AdminPoisPage() {
   };
   function openCreate() {
     setEditId(null);
-    setForm(emptyPoi());
+    setForm(emptyForm());
     setShowForm(true);
   }
   function openEdit(poi: Poi) {
@@ -125,17 +157,24 @@ export default function AdminPoisPage() {
       categoryId: poi.categoryId || "",
       status: poi.status || "approved",
       isActive: poi.isActive,
-      description: poi.description || { vi: "", en: "" },
+      description: (poi.description as any) || { vi: "", en: "" },
+      location: getPoiLatLng(poi),
     });
     setShowForm(true);
   }
   async function handleSave() {
     if (!form.title) return;
     setSaving(true);
+    const payload = {
+      ...form,
+      location: form.location
+        ? { latitude: form.location.lat, longitude: form.location.lng }
+        : undefined,
+    };
     if (editId) {
-      await updateAdminPoi(editId, form);
+      await updateAdminPoi(editId, payload);
     } else {
-      await createAdminPoi(form);
+      await createAdminPoi(payload);
     }
     setSaving(false);
     setShowForm(false);
@@ -298,6 +337,33 @@ export default function AdminPoisPage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-1">
+                          {poi.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  if (confirm("Duyệt POI này?")) {
+                                    const res = await updatePoiStatus(poi.id, 'approved');
+                                    if (res.success) load();
+                                  }
+                                }}
+                                className="p-2 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-400 transition-colors"
+                                title="Duyệt">
+                                <Check size={16} />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (confirm("Từ chối POI này?")) {
+                                    const res = await updatePoiStatus(poi.id, 'rejected');
+                                    if (res.success) load();
+                                  }
+                                }}
+                                className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
+                                title="Từ chối">
+                                <X size={16} />
+                              </button>
+                              <div className="w-px h-4 bg-white/[0.1] mx-1"></div>
+                            </>
+                          )}
                           <button
                             onClick={() => setSelectedPoi(poi)}
                             className="p-2 rounded-lg hover:bg-white/[0.06] text-muted-foreground hover:text-foreground transition-colors"
@@ -310,14 +376,7 @@ export default function AdminPoisPage() {
                             title="Sửa">
                             <Pencil size={16} />
                           </button>
-                          {poi.status?.toLowerCase() === "pending" && (
-                            <button
-                              onClick={() => handleStatusChange(poi.id, "approved")}
-                              className="p-2 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-400 transition-colors"
-                              title="Duyệt">
-                              <CheckCircle size={16} />
-                            </button>
-                          )}
+
                           <button
                             onClick={() => handleDelete(poi.id)}
                             className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors"
@@ -343,7 +402,7 @@ export default function AdminPoisPage() {
           </div>
         )}
       </div>
-      {/* Create/Edit Modal */}
+      {/* ── Create / Edit Modal ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -351,7 +410,8 @@ export default function AdminPoisPage() {
             onClick={() => setShowForm(false)}
           />
           <div className="relative w-full max-w-xl bg-[#131b2e] border border-white/[0.08] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-[#131b2e] z-10">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-[#131b2e]">
               <h3 className="text-lg font-semibold text-foreground">
                 {editId ? "Sửa địa điểm" : "Thêm địa điểm mới"}
               </h3>
@@ -366,7 +426,7 @@ export default function AdminPoisPage() {
               <div>
                 <label className="block text-xs text-muted-foreground mb-1.5">Tên địa điểm *</label>
                 <input
-                  value={form.title || ""}
+                  value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
                   placeholder="Bún Bò Huế Cô Ba"
@@ -376,9 +436,9 @@ export default function AdminPoisPage() {
               <div>
                 <label className="block text-xs text-muted-foreground mb-1.5">Mô tả ngắn</label>
                 <textarea
-                  value={form.summary || ""}
+                  value={form.summary}
                   onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
-                  rows={3}
+                  rows={2}
                   className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
                   placeholder="Quán bún bò nổi tiếng hơn 30 năm trên đường Vĩnh Khánh..."
                 />
@@ -387,7 +447,7 @@ export default function AdminPoisPage() {
               <div>
                 <label className="block text-xs text-muted-foreground mb-1.5">Địa chỉ</label>
                 <input
-                  value={form.address || ""}
+                  value={form.address}
                   onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
                   className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
                   placeholder="123 Vĩnh Khánh, Quận 4, TP.HCM"
@@ -397,7 +457,7 @@ export default function AdminPoisPage() {
               <div>
                 <label className="block text-xs text-muted-foreground mb-1.5">Danh mục</label>
                 <select
-                  value={form.categoryId || ""}
+                  value={form.categoryId}
                   onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                   className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all">
                   <option value="">— Chọn danh mục —</option>
@@ -408,13 +468,14 @@ export default function AdminPoisPage() {
                   ))}
                 </select>
               </div>
-              {/* Status */}
+              {/* Status buttons */}
               <div>
                 <label className="block text-xs text-muted-foreground mb-1.5">Trạng thái</label>
                 <div className="flex gap-2">
                   {["approved", "pending", "rejected"].map((s) => (
                     <button
                       key={s}
+                      type="button"
                       onClick={() => setForm((f) => ({ ...f, status: s }))}
                       className={cn(
                         "flex-1 py-2 rounded-xl text-xs font-semibold capitalize border transition-all",
@@ -428,17 +489,28 @@ export default function AdminPoisPage() {
                   ))}
                 </div>
               </div>
+              {/* ── MAP PICKER ── */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1.5">
+                  Vị trí trên bản đồ
+                  <span className="ml-1.5 text-emerald-500">★</span>
+                </label>
+                <MapPicker
+                  value={form.location}
+                  onChange={(pos) => setForm((f) => ({ ...f, location: pos }))}
+                />
+              </div>
               {/* Description VI */}
               <div>
                 <label className="block text-xs text-muted-foreground mb-1.5">
                   Mô tả chi tiết (Tiếng Việt)
                 </label>
                 <textarea
-                  value={form.description?.vi || ""}
+                  value={form.description.vi}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      description: { ...f.description!, vi: e.target.value },
+                      description: { ...f.description, vi: e.target.value },
                     }))
                   }
                   rows={3}
@@ -451,11 +523,11 @@ export default function AdminPoisPage() {
                   Mô tả chi tiết (English)
                 </label>
                 <textarea
-                  value={form.description?.en || ""}
+                  value={form.description.en}
                   onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      description: { ...f.description!, en: e.target.value },
+                      description: { ...f.description, en: e.target.value },
                     }))
                   }
                   rows={3}
@@ -463,6 +535,7 @@ export default function AdminPoisPage() {
                 />
               </div>
             </div>
+            {/* Footer */}
             <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/[0.06]">
               <button
                 onClick={() => setShowForm(false)}
@@ -480,7 +553,7 @@ export default function AdminPoisPage() {
           </div>
         </div>
       )}
-      {/* POI Detail Modal */}
+      {/* ── POI Detail Modal ── */}
       {selectedPoi && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
@@ -527,8 +600,17 @@ export default function AdminPoisPage() {
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <p className="text-xs text-muted-foreground mb-1">Owner</p>
-                  <p className="text-xs text-foreground font-mono">{selectedPoi.ownerId || "—"}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Tọa độ</p>
+                  {(() => {
+                    const ll = getPoiLatLng(selectedPoi);
+                    return ll ? (
+                      <p className="text-xs text-foreground font-mono">
+                        {ll.lat.toFixed(5)}, {ll.lng.toFixed(5)}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Chưa có</p>
+                    );
+                  })()}
                 </div>
               </div>
               {selectedPoi.audioUrl && (
@@ -541,7 +623,7 @@ export default function AdminPoisPage() {
                 <p className="text-xs text-muted-foreground mb-1">ID</p>
                 <p className="text-xs text-muted-foreground font-mono">{selectedPoi.id}</p>
               </div>
-              {/* Quick status actions */}
+              {/* Quick status */}
               <div className="flex gap-2 pt-2">
                 {selectedPoi.status?.toLowerCase() !== "approved" && (
                   <button

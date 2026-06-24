@@ -17,16 +17,16 @@ namespace FoodTour.Api.Repositories
         }
 
         /// <summary>
-        /// Get all active categories
+        /// Get all categories
         /// </summary>
-        public async Task<List<Category>> GetAllAsync()
+        public async Task<List<Category>> GetAllAsync(bool includeInactive = false)
         {
             var snapshot = await _db.Collection(CollectionName)
                 .OrderBy("order")
                 .GetSnapshotAsync();
 
             var list = ConvertSnapshotToCategories(snapshot);
-            return list.Where(c => c.Active).ToList();
+            return includeInactive ? list : list.Where(c => c.Active).ToList();
         }
 
         /// <summary>

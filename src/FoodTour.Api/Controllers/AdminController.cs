@@ -19,6 +19,7 @@ namespace FoodTour.Api.Controllers
         private readonly AuditRepository _auditRepo;
         private readonly AnalyticsRepository _analyticsRepo;
         private readonly PoiRepository _poiRepo;
+        private readonly SettingsRepository _settingsRepo;
 
         public AdminController(
             UserRepository userRepo,
@@ -26,7 +27,8 @@ namespace FoodTour.Api.Controllers
             ModerationRepository moderationRepo,
             AuditRepository auditRepo,
             AnalyticsRepository analyticsRepo,
-            PoiRepository poiRepo)
+            PoiRepository poiRepo,
+            SettingsRepository settingsRepo)
         {
             _userRepo = userRepo;
             _categoryRepo = categoryRepo;
@@ -34,6 +36,7 @@ namespace FoodTour.Api.Controllers
             _auditRepo = auditRepo;
             _analyticsRepo = analyticsRepo;
             _poiRepo = poiRepo;
+            _settingsRepo = settingsRepo;
         }
 
         private string GetAdminId() => HttpContext.Items["UserId"]?.ToString() ?? "";
@@ -279,6 +282,16 @@ namespace FoodTour.Api.Controllers
         // ──────────────────── CATEGORY MANAGEMENT ────────────────────
 
         /// <summary>
+        /// Get all categories (admin, including inactive)
+        /// </summary>
+        [HttpGet("categories")]
+        public async Task<IActionResult> GetCategories()
+        {
+            var categories = await _categoryRepo.GetAllAsync(includeInactive: true);
+            return Ok(ApiResponse.Ok(categories));
+        }
+
+        /// <summary>
         /// Create a category (admin)
         /// </summary>
         [HttpPost("categories")]
@@ -392,15 +405,23 @@ namespace FoodTour.Api.Controllers
         {
             var listenCounts = await _analyticsRepo.GetEventCountsByPoiAsync("LISTEN");
             var scanCounts = await _analyticsRepo.GetEventCountsByPoiAsync("QR_SCAN");
+            var viewCounts = await _analyticsRepo.GetEventCountsByPoiAsync("VIEW");
 
             // Merge and sort
-            var allPoiIds = listenCounts.Keys.Union(scanCounts.Keys).Distinct();
+            var allPoiIds = listenCounts.Keys.Union(scanCounts.Keys).Union(viewCounts.Keys).Distinct();
+            
+            // Get POIs to resolve titles
+            var allPois = await _poiRepo.GetAllUnfilteredAsync();
+            var poiDict = allPois.ToDictionary(p => p.Id ?? "", p => p.Title ?? "");
+
             var topPois = allPoiIds.Select(poiId => new
             {
                 poiId,
+                title = poiDict.ContainsKey(poiId) ? poiDict[poiId] : poiId,
                 listens = listenCounts.GetValueOrDefault(poiId, 0),
                 scans = scanCounts.GetValueOrDefault(poiId, 0),
-                total = listenCounts.GetValueOrDefault(poiId, 0) + scanCounts.GetValueOrDefault(poiId, 0)
+                views = viewCounts.GetValueOrDefault(poiId, 0),
+                total = listenCounts.GetValueOrDefault(poiId, 0) + scanCounts.GetValueOrDefault(poiId, 0) + viewCounts.GetValueOrDefault(poiId, 0)
             })
             .OrderByDescending(x => x.total)
             .Take(10)
@@ -574,6 +595,35 @@ namespace FoodTour.Api.Controllers
             });
 
             return Ok(ApiResponse.Ok("POI deleted"));
+        }
+
+        // ──────────────────── SYSTEM SETTINGS ────────────────────
+
+        [HttpGet("settings")]
+        public async Task<IActionResult> GetSettings()
+        {
+            var settings = await _settingsRepo.GetSettingsAsync();
+            return Ok(ApiResponse.Ok(settings));
+        }
+
+        [HttpPut("settings")]
+        public async Task<IActionResult> UpdateSettings([FromBody] SystemSettings settings)
+        {
+            var oldSettings = await _settingsRepo.GetSettingsAsync();
+            await _settingsRepo.SaveSettingsAsync(settings);
+            
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                AdminId = GetAdminId(),
+                Action = "UPDATE_SETTINGS",
+                TargetId = "system",
+                OldValue = System.Text.Json.JsonSerializer.Serialize(oldSettings),
+                NewValue = System.Text.Json.JsonSerializer.Serialize(settings),
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                UserAgent = Request.Headers["User-Agent"].ToString()
+            });
+
+            return Ok(ApiResponse.Ok(settings, "System settings updated"));
         }
     }
 

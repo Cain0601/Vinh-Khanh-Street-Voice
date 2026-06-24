@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useUserStore } from '@/store/userStore'
+import { getSystemSettings, updateSystemSettings } from '@/lib/adminApi'
 import { cn } from '@/lib/cn'
 import {
   Settings, Globe, Bell, Shield, Database,
@@ -11,7 +12,7 @@ import {
 export default function AdminSettingsPage() {
   const user = useUserStore(s => s.user)
 
-  const [settings, setSettings] = useState({
+  const defaultSettings = {
     siteName: 'VinhKhanh Food Tour',
     defaultLanguage: 'vi',
     autoApproval: false,
@@ -20,26 +21,34 @@ export default function AdminSettingsPage() {
     enableAnalytics: true,
     enableNotifications: true,
     maintenanceMode: false,
-  })
+  }
 
+  const [settings, setSettings] = useState(defaultSettings)
+  const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const res = await getSystemSettings()
+      if (res.success && res.data) {
+        setSettings({ ...defaultSettings, ...res.data })
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  async function handleSave() {
+    const res = await updateSystemSettings(settings)
+    if (res.success) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
   }
 
   function handleReset() {
-    setSettings({
-      siteName: 'VinhKhanh Food Tour',
-      defaultLanguage: 'vi',
-      autoApproval: false,
-      requireOnboarding: true,
-      maxUploadSize: 10,
-      enableAnalytics: true,
-      enableNotifications: true,
-      maintenanceMode: false,
-    })
+    setSettings(defaultSettings)
   }
 
   function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {

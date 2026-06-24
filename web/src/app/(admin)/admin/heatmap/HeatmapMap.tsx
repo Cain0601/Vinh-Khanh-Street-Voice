@@ -1,7 +1,7 @@
 "use client";
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import type { HeatPoint } from "./page";
+import type { HeatPoint, LiveUser } from "./page";
 
 function colorFor(ratio: number) {
   // green -> yellow -> red
@@ -16,9 +16,11 @@ function colorFor(ratio: number) {
 export default function HeatmapMap({
   points,
   maxIntensity,
+  liveUsers = [],
 }: {
   points: HeatPoint[];
   maxIntensity: number;
+  liveUsers?: LiveUser[];
 }) {
   const center: [number, number] = points.length
     ? [points[0].lat, points[0].lng]
@@ -51,6 +53,21 @@ export default function HeatmapMap({
           </CircleMarker>
         );
       })}
+      {liveUsers.map((u) => (
+        <CircleMarker
+          key={`live-${u.userId}`}
+          center={[u.lat, u.lng]}
+          radius={6}
+          pathOptions={{ color: "#3b82f6", fillColor: "#60a5fa", fillOpacity: 0.8, weight: 2 }}>
+          <Tooltip direction="top">
+            <div className="text-xs">
+              <b>{u.fullName}</b>
+              <br />
+              <span className="text-muted-foreground text-[10px]">Đang trực tuyến</span>
+            </div>
+          </Tooltip>
+        </CircleMarker>
+      ))}
     </MapContainer>
   );
 }

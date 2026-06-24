@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+import { signOut } from "@/lib/auth";
 import {
   LayoutDashboard,
   Users,
@@ -102,7 +103,7 @@ export default function AdminSidebar() {
         <div className="p-3 border-t border-white/[0.06]">
           <button
             onClick={() => {
-              logout();
+              signOut();
               window.location.href = "/";
             }}
             className={cn(

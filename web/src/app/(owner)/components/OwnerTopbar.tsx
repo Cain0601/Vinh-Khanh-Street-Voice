@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
+import { signOut } from "@/lib/auth";
 
 const MOCK_NOTIFICATIONS = [
   {
@@ -322,8 +323,9 @@ export default function OwnerTopbar() {
             <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
               <button
                 onClick={() => {
-                  logout();
-                  router.push("/login");
+                  // logout();
+                  signOut();
+                  window.location.href = "/";
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all font-semibold"
               >

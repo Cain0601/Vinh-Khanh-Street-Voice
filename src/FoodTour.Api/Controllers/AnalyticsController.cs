@@ -7,6 +7,9 @@ using FoodTour.Api.Services;
 using FoodTour.Api.DTOs;
 using FoodTour.Api.Models;
 
+using Microsoft.AspNetCore.SignalR;
+using FoodTour.Api.Hubs;
+
 namespace FoodTour.Api.Controllers
 {
     [ApiController]
@@ -16,17 +19,18 @@ namespace FoodTour.Api.Controllers
         private readonly AnalyticsRepository _analyticsRepository;
         private readonly PoiRepository _poiRepository;
         private readonly FirestoreService _firestoreService;
-        // private readonly AnalyticsRepository _analyticsRepo;
-        // private readonly PoiRepository _poiRepo;
+        private readonly IHubContext<LocationHub> _hubContext;
 
         public AnalyticsController(
             AnalyticsRepository analyticsRepository,
             PoiRepository poiRepository,
-            FirestoreService firestoreService)
+            FirestoreService firestoreService,
+            IHubContext<LocationHub> hubContext)
         {
             _analyticsRepository = analyticsRepository;
             _poiRepository = poiRepository;
             _firestoreService = firestoreService;
+            _hubContext = hubContext;
         }
         // public AnalyticsController(AnalyticsRepository analyticsRepo, PoiRepository poiRepo)
         // {
@@ -119,6 +123,8 @@ namespace FoodTour.Api.Controllers
                 UserId = GetUserId()
             });
 
+            await _hubContext.Clients.Group("Admins").SendAsync("PoiStatsUpdated", request.PoiId, "LISTEN");
+
             return Ok(ApiResponse.Ok("Listen event recorded"));
         }
 
@@ -140,6 +146,8 @@ namespace FoodTour.Api.Controllers
                 UserId = GetUserId()
             });
 
+            await _hubContext.Clients.Group("Admins").SendAsync("PoiStatsUpdated", request.PoiId, "QR_SCAN");
+
             return Ok(ApiResponse.Ok("QR scan recorded"));
         }
 
@@ -156,6 +164,8 @@ namespace FoodTour.Api.Controllers
                 PoiId = request.PoiId,
                 UserId = GetUserId()
             });
+
+            await _hubContext.Clients.Group("Admins").SendAsync("PoiStatsUpdated", request.PoiId, "VIEW");
 
             return Ok(ApiResponse.Ok("View event recorded"));
         }

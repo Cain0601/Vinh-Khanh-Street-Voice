@@ -1,7 +1,9 @@
 using FoodTour.Api.DTOs;
 using FoodTour.Api.Models;
 using FoodTour.Api.Repositories;
+using FoodTour.Api.Hubs;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace FoodTour.Api.Controllers
 {
@@ -10,10 +12,12 @@ namespace FoodTour.Api.Controllers
     public class ModerationController : ControllerBase
     {
         private readonly ModerationRepository _moderationRepo;
+        private readonly IHubContext<LocationHub> _hubContext;
 
-        public ModerationController(ModerationRepository moderationRepo)
+        public ModerationController(ModerationRepository moderationRepo, IHubContext<LocationHub> hubContext)
         {
             _moderationRepo = moderationRepo;
+            _hubContext = hubContext;
         }
 
         [HttpPost("requests")]
@@ -38,6 +42,16 @@ namespace FoodTour.Api.Controllers
             };
 
             var created = await _moderationRepo.AddAsync(moderationRequest);
+
+            // Notify all admins in real-time
+            await _hubContext.Clients.Group("Admins").SendAsync("NewModerationRequest", new
+            {
+                id = created.Id,
+                type = created.Type,
+                requestedBy = created.RequestedBy,
+                targetId = created.TargetId
+            });
+
             return Ok(ApiResponse.Ok(created, "Moderation request created"));
         }
     }

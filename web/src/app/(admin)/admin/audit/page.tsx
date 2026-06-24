@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn'
 import {
   ScrollText, Search, ChevronLeft, ChevronRight,
   UserCog, Shield, Trash2, Plus, Check, X,
-  Lock, Unlock, Eye
+  Lock, Unlock, Eye, RefreshCw
 } from 'lucide-react'
 
 type AuditLog = {
@@ -79,9 +79,18 @@ export default function AdminAuditPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Nhật ký hoạt động</h1>
-        <p className="text-sm text-muted-foreground mt-1">Theo dõi tất cả thao tác quản trị trong hệ thống</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Nhật ký hoạt động</h1>
+          <p className="text-sm text-muted-foreground mt-1">Theo dõi tất cả thao tác quản trị trong hệ thống</p>
+        </div>
+        <button
+          onClick={load}
+          className="p-2.5 rounded-xl border border-white/[0.06] hover:bg-white/[0.04] text-muted-foreground hover:text-foreground transition-colors"
+          title="Làm mới"
+        >
+          <RefreshCw size={16} />
+        </button>
       </div>
 
       {/* Search */}

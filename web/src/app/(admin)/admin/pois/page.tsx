@@ -126,8 +126,14 @@ export default function AdminPoisPage() {
       icon: XCircle,
     },
   };
-  const filtered = pois.filter((p) => {
-    if (statusFilter !== "all" && p.status?.toLowerCase() !== statusFilter) return false;
+  // Normalize status so undefined defaults to 'pending'
+  const normalizedPois = pois.map(p => ({
+    ...p,
+    status: p.status?.toLowerCase() || "pending"
+  }));
+
+  const filtered = normalizedPois.filter((p) => {
+    if (statusFilter !== "all" && p.status !== statusFilter) return false;
     if (search) {
       const title = p.title || "";
       return (
@@ -138,10 +144,10 @@ export default function AdminPoisPage() {
     return true;
   });
   const stats = {
-    total: pois.length,
-    approved: pois.filter((p) => p.status?.toLowerCase() === "approved").length,
-    pending: pois.filter((p) => p.status?.toLowerCase() === "pending").length,
-    rejected: pois.filter((p) => p.status?.toLowerCase() === "rejected").length,
+    total: normalizedPois.length,
+    approved: normalizedPois.filter((p) => p.status === "approved").length,
+    pending: normalizedPois.filter((p) => p.status === "pending").length,
+    rejected: normalizedPois.filter((p) => p.status === "rejected").length,
   };
   function openCreate() {
     setEditId(null);

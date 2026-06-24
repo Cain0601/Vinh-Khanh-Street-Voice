@@ -107,6 +107,7 @@ builder.Services.AddScoped<MenuItemRepository>();
 builder.Services.AddScoped<AnalyticsRepository>();
 builder.Services.AddScoped<AuditRepository>();
 builder.Services.AddScoped<ModerationRepository>();
+builder.Services.AddScoped<SettingsRepository>();
 
 // Database initializer
 builder.Services.AddScoped<DatabaseInitializerService>();

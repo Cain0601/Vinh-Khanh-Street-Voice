@@ -138,7 +138,7 @@ export default function AdminDashboard() {
       conn.stop();
     };
   }, []);
-  const kpiCards: KpiCard[] = [
+  const kpiCards = [
     {
       label: "Tổng người dùng",
       value: summary?.totalUsers ?? "—",

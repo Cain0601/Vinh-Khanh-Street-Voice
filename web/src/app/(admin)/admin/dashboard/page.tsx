@@ -25,6 +25,8 @@ import { cn } from "@/lib/cn";
 type KpiCard = {
   label: string;
   value: string | number;
+  live?: number | null;
+  change?: string;
   icon: any;
   gradient: string;
   shadowColor: string;
@@ -36,6 +38,7 @@ export default function AdminDashboard() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [liveUsers, setLiveUsers] = useState<any[]>([]);
   const [liveStats, setLiveStats] = useState({ listens: 0, scans: 0, views: 0 });
   const [onlineCount, setOnlineCount] = useState(0);
   const connectionRef = useRef<HubConnection | null>(null);
@@ -97,6 +100,44 @@ export default function AdminDashboard() {
 
     return () => { conn.stop(); };
   }, []);
+
+  // SignalR for live user count
+  useEffect(() => {
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("ft_token="))
+      ?.split("=")[1];
+    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+    const conn = new HubConnectionBuilder()
+      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .configureLogging(LogLevel.Information)
+      .withAutomaticReconnect()
+      .build();
+
+    conn.on("UserLocationUpdated", (data) => {
+      setLiveUsers((prev) => {
+        const existing = prev.findIndex(u => u.userId === data.userId);
+        if (existing >= 0) {
+          const newArr = [...prev];
+          newArr[existing] = data;
+          return newArr;
+        }
+        return [...prev, data];
+      });
+    });
+
+    conn.on("UserDisconnected", (userId) => {
+      setLiveUsers((prev) => prev.filter(u => u.userId !== userId));
+    });
+
+    conn.start()
+      .then(() => console.log("Connected to LocationHub (Dashboard)"))
+      .catch(err => console.error("SignalR connection error:", err));
+
+    return () => {
+      conn.stop();
+    };
+  }, []);
   const kpiCards = [
     {
       label: "Tổng người dùng",
@@ -105,6 +146,14 @@ export default function AdminDashboard() {
       icon: Users,
       gradient: "from-blue-500 to-indigo-600",
       shadowColor: "shadow-blue-500/20",
+    },
+    {
+      label: "Người dùng trực tiếp",
+      value: liveUsers.length ?? "—",
+      change: "",
+      icon: Users,
+      gradient: "from-green-500 to-emerald-600",
+      shadowColor: "shadow-green-500/20",
     },
     {
       label: "Lượt nghe",
@@ -177,7 +226,7 @@ export default function AdminDashboard() {
                 <p className="text-3xl font-bold text-foreground mt-1 tracking-tight">
                   {typeof card.value === "number" ? card.value.toLocaleString() : card.value}
                 </p>
-                {card.live !== null && card.live > 0 && (
+                {card.live !== null && (
                   <div className="flex items-center gap-1 mt-2 text-xs font-medium text-emerald-400">
                     <ArrowUpRight size={14} />
                     +{card.live} phiên này

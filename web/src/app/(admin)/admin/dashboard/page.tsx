@@ -7,6 +7,7 @@ import {
   getModerationRequests,
 } from "@/lib/adminApi";
 import { getCategories } from "@/lib/api";
+import { HubConnectionBuilder, LogLevel, HubConnection } from "@microsoft/signalr";
 import {
   Users,
   MapPin,
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [liveUsers, setLiveUsers] = useState<any[]>([]);
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -55,6 +57,44 @@ export default function AdminDashboard() {
     }
     load();
   }, []);
+
+  // SignalR for live user count
+  useEffect(() => {
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("ft_token="))
+      ?.split("=")[1];
+    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+    const conn = new HubConnectionBuilder()
+      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .configureLogging(LogLevel.Information)
+      .withAutomaticReconnect()
+      .build();
+
+    conn.on("UserLocationUpdated", (data) => {
+      setLiveUsers((prev) => {
+        const existing = prev.findIndex(u => u.userId === data.userId);
+        if (existing >= 0) {
+          const newArr = [...prev];
+          newArr[existing] = data;
+          return newArr;
+        }
+        return [...prev, data];
+      });
+    });
+
+    conn.on("UserDisconnected", (userId) => {
+      setLiveUsers((prev) => prev.filter(u => u.userId !== userId));
+    });
+
+    conn.start()
+      .then(() => console.log("Connected to LocationHub (Dashboard)"))
+      .catch(err => console.error("SignalR connection error:", err));
+
+    return () => {
+      conn.stop();
+    };
+  }, []);
   const kpiCards: KpiCard[] = [
     {
       label: "Tổng người dùng",
@@ -64,6 +104,14 @@ export default function AdminDashboard() {
       icon: Users,
       gradient: "from-blue-500 to-indigo-600",
       shadowColor: "shadow-blue-500/20",
+    },
+    {
+      label: "Người dùng trực tiếp",
+      value: liveUsers.length ?? "—",
+      change: "",
+      icon: Users,
+      gradient: "from-green-500 to-emerald-600",
+      shadowColor: "shadow-green-500/20",
     },
     {
       label: "Lượt nghe",

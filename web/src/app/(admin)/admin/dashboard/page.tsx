@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { HubConnectionBuilder, LogLevel, HubConnection } from "@microsoft/signalr";
 import {
   getAnalyticsSummary,
   getTopPois,
@@ -7,7 +8,6 @@ import {
   getModerationRequests,
 } from "@/lib/adminApi";
 import { getCategories } from "@/lib/api";
-import { HubConnectionBuilder, LogLevel, HubConnection } from "@microsoft/signalr";
 import {
   Users,
   MapPin,
@@ -19,13 +19,14 @@ import {
   Clock,
   ShieldCheck,
   FolderTree,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 type KpiCard = {
   label: string;
   value: string | number;
+  live?: number | null;
   change?: string;
-  up?: boolean;
   icon: any;
   gradient: string;
   shadowColor: string;
@@ -38,24 +39,66 @@ export default function AdminDashboard() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [liveUsers, setLiveUsers] = useState<any[]>([]);
+  const [liveStats, setLiveStats] = useState({ listens: 0, scans: 0, views: 0 });
+  const [onlineCount, setOnlineCount] = useState(0);
+  const connectionRef = useRef<HubConnection | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const [sumRes, topRes, usersRes, modRes, catRes] = await Promise.all([
+      getAnalyticsSummary(),
+      getTopPois(),
+      getAdminUsers(1, 5),
+      getModerationRequests("PENDING"),
+      getCategories(),
+    ]);
+    if (sumRes.success) setSummary(sumRes.data);
+    if (topRes.success) setTopPois(Array.isArray(topRes.data) ? topRes.data : []);
+    if (usersRes.success) setRecentUsers(usersRes.data?.data || usersRes.data || []);
+    if (modRes.success) setPendingRequests(modRes.data?.items || []);
+    if (catRes.success) setCategories(Array.isArray(catRes.data) ? catRes.data : []);
+    setLoading(false);
+    // Reset live increments on full refresh
+    setLiveStats({ listens: 0, scans: 0, views: 0 });
+  }
+
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const [sumRes, topRes, usersRes, modRes, catRes] = await Promise.all([
-        getAnalyticsSummary(),
-        getTopPois(),
-        getAdminUsers(1, 5),
-        getModerationRequests("PENDING"),
-        getCategories(),
-      ]);
-      if (sumRes.success) setSummary(sumRes.data);
-      if (topRes.success) setTopPois(Array.isArray(topRes.data) ? topRes.data : []);
-      if (usersRes.success) setRecentUsers(usersRes.data?.data || usersRes.data || []);
-      if (modRes.success) setPendingRequests(modRes.data?.items || []);
-      if (catRes.success) setCategories(Array.isArray(catRes.data) ? catRes.data : []);
-      setLoading(false);
-    }
     load();
+
+    // SignalR real-time updates
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("ft_token="))
+      ?.split("=")[1];
+
+    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+    const conn = new HubConnectionBuilder()
+      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .configureLogging(LogLevel.None)
+      .withAutomaticReconnect()
+      .build();
+
+    conn.on("PoiStatsUpdated", (_poiId: string, eventType: string) => {
+      setLiveStats((prev) => ({
+        listens: eventType === "LISTEN" ? prev.listens + 1 : prev.listens,
+        scans: eventType === "QR_SCAN" ? prev.scans + 1 : prev.scans,
+        views: eventType === "VIEW" ? prev.views + 1 : prev.views,
+      }));
+    });
+
+    conn.on("UserLocationUpdated", () => {
+      setOnlineCount((prev) => prev + 1);
+    });
+
+    conn.on("UserDisconnected", () => {
+      setOnlineCount((prev) => Math.max(0, prev - 1));
+    });
+
+    conn.start().then(() => {
+      connectionRef.current = conn;
+    }).catch(() => {});
+
+    return () => { conn.stop(); };
   }, []);
 
   // SignalR for live user count
@@ -99,8 +142,7 @@ export default function AdminDashboard() {
     {
       label: "Tổng người dùng",
       value: summary?.totalUsers ?? "—",
-      change: "+12%",
-      up: true,
+      live: null,
       icon: Users,
       gradient: "from-blue-500 to-indigo-600",
       shadowColor: "shadow-blue-500/20",
@@ -116,8 +158,7 @@ export default function AdminDashboard() {
     {
       label: "Lượt nghe",
       value: summary?.totalListens ?? "—",
-      change: "+8%",
-      up: true,
+      live: liveStats.listens,
       icon: Headphones,
       gradient: "from-emerald-400 to-emerald-600",
       shadowColor: "shadow-emerald-500/20",
@@ -125,8 +166,7 @@ export default function AdminDashboard() {
     {
       label: "Lượt quét QR",
       value: summary?.totalScans ?? "—",
-      change: "+24%",
-      up: true,
+      live: liveStats.scans,
       icon: QrCode,
       gradient: "from-amber-400 to-orange-500",
       shadowColor: "shadow-amber-500/20",
@@ -134,8 +174,7 @@ export default function AdminDashboard() {
     {
       label: "Lượt xem",
       value: summary?.totalViews ?? "—",
-      change: "-3%",
-      up: false,
+      live: liveStats.views,
       icon: TrendingUp,
       gradient: "from-purple-400 to-purple-600",
       shadowColor: "shadow-purple-500/20",
@@ -154,9 +193,26 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Tổng quan hệ thống VinhKhanh Food Tour</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Tổng quan hệ thống VinhKhanh Food Tour</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {onlineCount > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {onlineCount} đang trực tuyến
+            </div>
+          )}
+          <button
+            onClick={load}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground border border-white/[0.06] hover:bg-white/[0.04] hover:text-foreground transition-colors"
+          >
+            <RefreshCw size={14} />
+            Làm mới
+          </button>
+        </div>
       </div>
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -170,14 +226,10 @@ export default function AdminDashboard() {
                 <p className="text-3xl font-bold text-foreground mt-1 tracking-tight">
                   {typeof card.value === "number" ? card.value.toLocaleString() : card.value}
                 </p>
-                {card.change && (
-                  <div
-                    className={cn(
-                      "flex items-center gap-1 mt-2 text-xs font-medium",
-                      card.up ? "text-emerald-400" : "text-red-400",
-                    )}>
-                    {card.up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                    {card.change} so với tháng trước
+                {card.live !== null && (
+                  <div className="flex items-center gap-1 mt-2 text-xs font-medium text-emerald-400">
+                    <ArrowUpRight size={14} />
+                    +{card.live} phiên này
                   </div>
                 )}
               </div>
@@ -237,9 +289,9 @@ export default function AdminDashboard() {
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{poi.poiId}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{poi.title || poi.poiId}</p>
                     <p className="text-xs text-muted-foreground">
-                      {poi.listens} nghe · {poi.scans} quét
+                      {poi.listens} nghe · {poi.scans} quét · {poi.views || 0} xem
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-emerald-400">{poi.total}</span>

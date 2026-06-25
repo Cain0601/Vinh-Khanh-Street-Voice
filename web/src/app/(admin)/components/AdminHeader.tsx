@@ -2,9 +2,15 @@
 import { useUserStore } from "@/store/userStore";
 import { Bell, Search, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { signOut } from "@/lib/auth";
 export default function AdminHeader() {
   const user = useUserStore((s) => s.user);
   const [showProfile, setShowProfile] = useState(false);
+  const handleLogout = async () => {
+    // Thực hiện logout ở đây
+    await signOut();
+    window.location.href = "/";
+  };
   return (
     <header className="sticky top-0 z-20 h-16 flex items-center justify-between px-6 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/[0.06]">
       {/* Search */}
@@ -49,7 +55,9 @@ export default function AdminHeader() {
                 Cài đặt
               </a>
               <hr className="border-white/[0.06] my-1" />
-              <button className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/5 transition-colors">
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/5 transition-colors">
                 Đăng xuất
               </button>
             </div>

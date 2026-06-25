@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr'
 import { getModerationRequests, approveModerationRequest, rejectModerationRequest } from '@/lib/adminApi'
 import { cn } from '@/lib/cn'
 import {
@@ -27,6 +28,8 @@ export default function AdminApprovalsPage() {
   const [rejectModal, setRejectModal] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
+  const connectionRef = useRef<HubConnection | null>(null);
+
   async function load() {
     setLoading(true)
     const res = await getModerationRequests(statusFilter === 'ALL' ? undefined : statusFilter)
@@ -34,7 +37,33 @@ export default function AdminApprovalsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [statusFilter])
+  useEffect(() => { 
+    load() 
+
+    // Setup SignalR for real-time requests
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("ft_token="))
+      ?.split("=")[1];
+
+    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+    const conn = new HubConnectionBuilder()
+      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .configureLogging(LogLevel.None)
+      .withAutomaticReconnect()
+      .build();
+
+    conn.on("NewModerationRequest", () => {
+      // Refresh the list when a new request arrives
+      load();
+    });
+
+    conn.start().then(() => {
+      connectionRef.current = conn;
+    }).catch(() => {});
+
+    return () => { conn.stop(); };
+  }, [statusFilter])
 
   async function handleApprove(id: string) {
     setActionLoading(id)

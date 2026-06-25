@@ -35,10 +35,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ─────────────────── Services ───────────────────
 
-builder.Services.AddHttpClient();
-builder.Services.AddSingleton<TranslationService>();
+builder.Services.AddHttpClient<TranslationService>();
 builder.Services.AddSingleton<PiperTtsService>();
 builder.Services.AddSingleton<CloudinaryService>();
+// Register cache and manager services
+builder.Services.AddScoped<TtsCacheRepository>();
+builder.Services.AddScoped<TtsManagerService>();
 
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
@@ -107,6 +109,7 @@ builder.Services.AddScoped<MenuItemRepository>();
 builder.Services.AddScoped<AnalyticsRepository>();
 builder.Services.AddScoped<AuditRepository>();
 builder.Services.AddScoped<ModerationRepository>();
+builder.Services.AddScoped<SettingsRepository>();
 
 // Database initializer
 builder.Services.AddScoped<DatabaseInitializerService>();

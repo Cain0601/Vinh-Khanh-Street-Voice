@@ -5,7 +5,6 @@ import { AlertCircle, Camera, Loader2, ScanLine, X, Image as ImageIcon } from 'l
 import { Html5Qrcode } from 'html5-qrcode'
 import { useTranslation } from '@/i18n';
 import { useRouter } from 'next/navigation';
-import { analyticsApi } from '@/lib/api/analytics';
 
 interface QRScannerProps {
   isOpen: boolean
@@ -19,6 +18,7 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [cameraReady, setCameraReady] = useState(false)
+  const [isProcessingFile, setIsProcessingFile] = useState(false)
 
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const isStoppingRef = useRef(false)
@@ -53,24 +53,21 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
   // Xử lý khi quét thành công
   const handleScanSuccess = useCallback(async (decodedText: string) => {
     console.log('Scanned:', decodedText)
-    const poiMatch = decodedText.match(/\/poi\/([a-f0-9-]{36})/i);
+    
+    const poiMatch = decodedText.match(/\/poi\/([A-Za-z0-9]{20,})/);
     
     if (poiMatch) {
       const poiId = poiMatch[1];
       await stopScanner();
-      // triggerSuccessEffect();
-      
-      // Track QR scan event
-      // void analyticsApi.reportQrScan(poiId, 'app');
       
       setTimeout(() => {
         onClose();
         router.push(`/pois/${poiId}`);
-      }, 1000);
+      }, 800);
     } else {
-      // setError(t.qrScanner.invalidQr);
+      setError('Mã QR không hợp lệ');
     }
-  }, [onScan, stopScanner, onClose])
+  }, [stopScanner, onClose, router, t])
 
   // Khởi động scanner
   useEffect(() => {
@@ -92,7 +89,7 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
           { facingMode: 'environment' },
           { fps: 12, qrbox: { width: 280, height: 280 } },
           handleScanSuccess,
-          () => {} // error callback (im lặng)
+          () => {} // error callback
         )
         setCameraReady(true)
       } catch (err) {
@@ -115,18 +112,44 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
     }
   }, [isOpen, stopScanner, handleScanSuccess, t])
 
-  // === PHẦN MỞ FOLDER CHỌN ẢNH ===
+  // === SCAN TỪ FILE ẢNH ===
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
 
     const imageFile = e.target.files[0]
-    const html5QrCode = new Html5Qrcode('qr-reader')
+    
+    // Dừng camera trước khi scan file
+    await stopScanner()
+    setIsProcessingFile(true)
+    setError(null)
+
+    let html5QrCode = scannerRef.current
+
+    // Nếu chưa có instance thì tạo mới
+    if (!html5QrCode) {
+      html5QrCode = new Html5Qrcode('qr-reader')
+      scannerRef.current = html5QrCode
+    }
 
     try {
-      const result = await html5QrCode.scanFile(imageFile, true)
+      const result = await html5QrCode.scanFile(imageFile, true) // true = hiển thị ảnh lên element
+      console.log('Scanned from file:', result)
+      
       await handleScanSuccess(result)
-    } catch (err) {
-      setError(t.qrScanner.noQrFound || 'Không tìm thấy mã QR trong ảnh này')
+    } catch (err: any) {
+      console.error('Scan file error:', err)
+      
+      let errorMessage = t.qrScanner.noQrFound || 'Không tìm thấy mã QR trong ảnh này'
+      
+      if (err?.message?.includes('No MultiFormat Readers') || err?.message?.includes('QR code')) {
+        errorMessage = 'Không nhận diện được mã QR. Ảnh có thể bị mờ hoặc không đúng định dạng.'
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setIsProcessingFile(false)
+      // Reset input để có thể chọn lại cùng file
+      e.target.value = ''
     }
   }
 
@@ -149,7 +172,10 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
             </p>
             <h2 className="text-lg font-semibold text-white">{t.qrScanner.title}</h2>
           </div>
-          <button onClick={handleClose} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10">
+          <button 
+            onClick={handleClose} 
+            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -161,11 +187,21 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
           {/* Overlay */}
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0,transparent_34%,rgba(0,0,0,0.58)_35%,rgba(0,0,0,0.78)_100%)]" />
 
-          {!cameraReady && !error && (
+          {!cameraReady && !error && !isProcessingFile && (
             <div className="absolute inset-0 grid place-items-center bg-zinc-950">
               <div className="flex flex-col items-center text-center">
                 <Loader2 className="h-10 w-10 animate-spin text-emerald-400 mb-4" />
                 <p className="text-white font-medium">{t.qrScanner.loading}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Loading khi xử lý file */}
+          {isProcessingFile && (
+            <div className="absolute inset-0 grid place-items-center bg-black/90">
+              <div className="flex flex-col items-center text-center">
+                <Loader2 className="h-10 w-10 animate-spin text-emerald-400 mb-4" />
+                <p className="text-white font-medium">Đang xử lý ảnh...</p>
               </div>
             </div>
           )}
@@ -199,7 +235,7 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
 
         {/* Bottom Section */}
         <div className="border-t border-white/10 bg-zinc-950 p-4 space-y-3">
-          {/* Nút mở folder chọn ảnh */}
+          {/* Nút chọn ảnh từ thư viện */}
           <label className="flex items-center justify-center gap-3 w-full h-12 bg-white/10 hover:bg-white/15 rounded-2xl font-medium text-white cursor-pointer active:scale-[0.98] transition-all">
             <ImageIcon className="w-5 h-5" />
             <span>{t.qrScanner.chooseFromGallery || 'Chọn ảnh từ thư viện'}</span>

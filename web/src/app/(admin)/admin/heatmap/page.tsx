@@ -73,6 +73,23 @@ export default function AdminHeatmapPage() {
       setLiveUsers((prev) => prev.filter(u => u.userId !== userId));
     });
 
+    conn.on("PoiStatsUpdated", (poiId: string, eventType: string) => {
+      setPoints((prev) => {
+        return prev.map(p => {
+          if (p.poiId === poiId) {
+            return {
+              ...p,
+              intensity: p.intensity + 1,
+              views: eventType === 'VIEW' ? p.views + 1 : p.views,
+              listens: eventType === 'LISTEN' ? p.listens + 1 : p.listens,
+              scans: eventType === 'QR_SCAN' ? p.scans + 1 : p.scans,
+            };
+          }
+          return p;
+        });
+      });
+    });
+
     conn.start().then(() => {
       console.log("Connected to LocationHub as Admin");
       connectionRef.current = conn;
@@ -88,19 +105,27 @@ export default function AdminHeatmapPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Flame size={22} className="text-orange-400" />
-          Heatmap khu vực
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Mức độ tương tác (lượt xem + nghe + quét QR) theo từng địa điểm
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Flame size={22} className="text-orange-400" />
+            Heatmap khu vực
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Mức độ tương tác (lượt xem + nghe + quét QR) theo từng địa điểm
+          </p>
+        </div>
+        {liveUsers.length > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            {liveUsers.length} đang trực tuyến
+          </div>
+        )}
       </div>
 
       {loading ? (
         <div className="h-[60vh] rounded-2xl bg-secondary/50 animate-pulse" />
-      ) : points.length === 0 ? (
+      ) : points.length === 0 && liveUsers.length === 0 ? (
         <div className="rounded-2xl bg-secondary/50 border border-white/[0.06] p-10 text-center text-sm text-muted-foreground">
           Chưa có dữ liệu tương tác để hiển thị heatmap
         </div>

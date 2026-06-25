@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { getCategories } from '@/lib/api'
+import { getAdminCategories } from '@/lib/adminApi'
 import { createCategory, updateCategory, deleteCategory } from '@/lib/adminApi'
 import { cn } from '@/lib/cn'
 import { FolderTree, Plus, Pencil, Trash2, X, Check, GripVertical } from 'lucide-react'
@@ -34,11 +34,16 @@ export default function AdminCategoriesPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<Partial<Category>>(emptyForm())
   const [saving, setSaving] = useState(false)
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null)
 
   async function load() {
     setLoading(true)
-    const res = await getCategories()
-    if (res.success) setCategories(Array.isArray(res.data) ? (res.data as Category[]) : [])
+    const res = await getAdminCategories()
+    if (res.success) {
+      const data = Array.isArray(res.data) ? (res.data as Category[]) : []
+      data.sort((a, b) => (a.order || 0) - (b.order || 0))
+      setCategories(data)
+    }
     setLoading(false)
   }
 
@@ -75,6 +80,30 @@ export default function AdminCategoriesPage() {
     await load()
   }
 
+  async function handleDrop(e: React.DragEvent, dropIdx: number) {
+    e.preventDefault()
+    if (draggedIdx === null || draggedIdx === dropIdx) return
+
+    const newCats = [...categories]
+    const draggedItem = newCats[draggedIdx]
+    
+    // Remove from old pos and insert to new pos
+    newCats.splice(draggedIdx, 1)
+    newCats.splice(dropIdx, 0, draggedItem)
+
+    // Reassign order
+    newCats.forEach((c, idx) => {
+      c.order = idx
+    })
+
+    setCategories(newCats)
+    setDraggedIdx(null)
+
+    // Optimistically update backend
+    const updates = newCats.map(c => updateCategory(c.id, { order: c.order }))
+    await Promise.all(updates)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -99,13 +128,23 @@ export default function AdminCategoriesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {categories.map((cat) => (
+          {categories.map((cat, idx) => (
             <div
               key={cat.id}
-              className="group relative rounded-2xl bg-secondary/50 border border-white/[0.06] p-5 hover:border-white/[0.12] transition-all duration-300"
+              draggable
+              onDragStart={() => setDraggedIdx(idx)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDrop(e, idx)}
+              className={cn(
+                "group relative rounded-2xl bg-secondary/50 border border-white/[0.06] p-5 hover:border-white/[0.12] transition-all duration-300 cursor-grab active:cursor-grabbing",
+                draggedIdx === idx && "opacity-50 border-emerald-500/50"
+              )}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
+                  <div className="text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors mr-1">
+                    <GripVertical size={18} />
+                  </div>
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-lg"
                     style={{ background: `${cat.color || '#10b981'}15`, boxShadow: `0 4px 14px ${cat.color || '#10b981'}10` }}
@@ -147,10 +186,15 @@ export default function AdminCategoriesPage() {
                 <span className="text-[10px] text-muted-foreground font-mono">/{cat.slug}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground">#{cat.order}</span>
-                  <span className={cn(
-                    'w-2 h-2 rounded-full',
-                    cat.active ? 'bg-emerald-400' : 'bg-red-400'
-                  )} />
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn(
+                      'w-2 h-2 rounded-full',
+                      cat.active !== false ? 'bg-emerald-400' : 'bg-red-400'
+                    )} />
+                    <span className="text-[10px] text-muted-foreground">
+                      {cat.active !== false ? 'Hoạt động' : 'Đã ẩn'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -183,7 +227,7 @@ export default function AdminCategoriesPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
               {/* Icon + Color */}
               <div className="flex gap-4">
                 <div className="flex-1">
@@ -259,6 +303,26 @@ export default function AdminCategoriesPage() {
                   onChange={e => setForm(f => ({ ...f, order: parseInt(e.target.value) || 0 }))}
                   className="w-24 px-3 py-2.5 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
                 />
+              </div>
+
+              {/* Active Toggle */}
+              <div className="col-span-1 flex items-center justify-between pt-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Hoạt động</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Hiển thị danh mục này cho người dùng</p>
+                </div>
+                <button
+                  onClick={() => setForm(f => ({ ...f, active: !f.active }))}
+                  className={cn(
+                    'relative w-11 h-6 rounded-full transition-colors duration-200',
+                    form.active ? 'bg-emerald-500' : 'bg-white/10'
+                  )}
+                >
+                  <span className={cn(
+                    'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200',
+                    form.active && 'translate-x-5'
+                  )} />
+                </button>
               </div>
             </div>
 

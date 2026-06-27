@@ -134,23 +134,33 @@ export default function MapPicker({ value, onChange }: Props) {
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <input
+            type="search"
+            autoComplete="off"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSearch();
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             placeholder="Tìm địa chỉ... (Enter để tìm)"
             className="w-full pl-9 pr-4 py-2 bg-white/[0.04] border border-white/[0.06] rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
+            style={{ pointerEvents: "auto" }}
           />
         </div>
         <button
           type="button"
-          onClick={handleSearch}
+          onClick={(e) => { e.stopPropagation(); handleSearch(); }}
           disabled={searching}
           className="px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-colors disabled:opacity-50">
           {searching ? "..." : "Tìm"}
         </button>
         <button
           type="button"
-          onClick={handleUserLocation}
+          onClick={(e) => { e.stopPropagation(); handleUserLocation(); }}
           title="Dùng vị trí của tôi"
           className="px-2.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-muted-foreground hover:text-foreground hover:bg-white/[0.08] transition-colors">
           <MapPin size={14} />

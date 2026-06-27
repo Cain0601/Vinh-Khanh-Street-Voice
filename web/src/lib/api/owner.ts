@@ -11,7 +11,9 @@ export type OwnerPoiListItem = {
   rating?: number;
   reviewCount?: number;
   mediaUrls?: string[];
+  imageUrls?: string[];
   categoryId?: string;
+  translations?: Array<{ imageUrl?: string; name?: string }>;
 };
 
 export type Pagination = {
@@ -37,13 +39,25 @@ export async function getOwnerPois(params?: {
   return api.get<{ data: OwnerPoiListItem[]; pagination: Pagination }>(`/pois/owner/list${qs}`);
 }
 
+export async function getCategories() {
+  return api.get<unknown[]>("/api/categories");
+}
+
 export async function createPoi(body: {
   title: string;
   summary?: string;
   address?: string;
   categoryId?: string;
+  ownerId?: string;
+  location?: { lat: number; lng: number };
 }) {
   return api.post("/api/pois", body);
+}
+
+export async function uploadPoiImage(poiId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post(`/api/pois/${poiId}/image`, formData);
 }
 
 export async function updatePoi(id: string, body: Partial<{ title: string; summary: string; address: string; categoryId: string }>) {

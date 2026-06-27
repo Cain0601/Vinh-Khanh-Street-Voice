@@ -98,6 +98,8 @@ builder.Services.AddSwaggerGen();
 // FirestoreService will hold a null Db when credentials are missing;
 // repositories return empty results in that case.
 builder.Services.AddSingleton<FirestoreService>();
+// Admin settings helper
+builder.Services.AddScoped<AdminSettingsService>();
 
 // Repositories
 builder.Services.AddScoped<PoiRepository>();

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Suspense, useEffect, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo, Suspense } from 'react';
 import { useTranslation } from '@/i18n';
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
@@ -83,54 +83,41 @@ function MapPageContent() {
   const [searchQuery, setSearchQuery] = useState(initialSearch)
   const [activeFilter, setActiveFilter] = useState('all')
   const [showList, setShowList] = useState(!!initialSearch)
+  const [internalUserPos, setInternalUserPos] = useState<[number, number] | null>(null);
 
   const { currentPoi, queue, currentIndex, isPlaying, audioRef, currentTime, duration, enqueue, skip, play, pause, clearQueue } = usePoiAudioQueue();
 
   const connectionRef = useRef<HubConnection | null>(null);
 
+  // SignalR setup for sending user location to admin dashboard
   useEffect(() => {
-    // 1. Setup SignalR
     const token = document.cookie
       .split("; ")
       .find((row) => row.startsWith("ft_token="))
       ?.split("=")[1];
-
     const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
-
     const conn = new HubConnectionBuilder()
-      .withUrl(hubUrl, {
-        accessTokenFactory: () => token || ""
-      })
+      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
       .configureLogging(LogLevel.Information)
       .withAutomaticReconnect()
       .build();
-
-    conn.start().then(() => {
-      console.log("Connected to LocationHub");
-      connectionRef.current = conn;
-    }).catch(err => console.error("SignalR Connection Error: ", err));
-
-    // 2. Watch Location
-    let watchId: number;
-    if ("geolocation" in navigator) {
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          if (connectionRef.current?.state === "Connected") {
-            connectionRef.current.invoke("SendLocation", latitude, longitude)
-              .catch(err => console.error("Error sending location: ", err));
-          }
-        },
-        (error) => console.error("Geolocation error:", error),
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-      );
-    }
-
+    conn.start()
+      .then(() => console.log("Connected to LocationHub (Map page)"))
+      .catch((err) => console.error("SignalR connection error:", err));
+    connectionRef.current = conn;
     return () => {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
       conn.stop();
     };
   }, []);
+
+  // Helper to send location via SignalR
+  const sendLocation = (lat: number, lng: number) => {
+    if (connectionRef.current) {
+      connectionRef.current.invoke("SendLocation", lat, lng).catch((err) => {
+        console.error("Error sending location:", err);
+      });
+    }
+  };
 
   // Filter restaurants based on search and category
   const filteredRestaurants = useMemo(() => {
@@ -170,7 +157,17 @@ function MapPageContent() {
       ) : (
         <div className="flex-1 relative bg-slate-800">
           <div className="absolute inset-0">
-            <MapView userPos={null} pois={[]} onTriggerAudio={enqueue} onMapClick={() => {}} />
+            <MapView
+          userPos={internalUserPos}
+          pois={[]}
+          onTriggerAudio={enqueue}
+          onMapClick={(lat, lng) => {
+            // Update internal position for manual mode if needed
+            setInternalUserPos([lat, lng]);
+            // Send location to server
+            sendLocation(lat, lng);
+          }}
+        />
           </div>
           
           <PoiAudioDrawer 

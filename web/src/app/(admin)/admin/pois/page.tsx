@@ -49,7 +49,6 @@ type Poi = {
   rating?: number;
   reviewCount?: number;
   mediaUrls?: string[];
-  description?: Record<string, string>;
   audioUrl?: string;
   location?: { latitude?: number; longitude?: number; _latitude?: number; _longitude?: number };
 };
@@ -60,7 +59,6 @@ type FormState = {
   categoryId: string;
   status: string;
   isActive: boolean;
-  description: { vi: string; en: string };
   location?: LatLng;
 };
 const emptyForm = (): FormState => ({
@@ -70,7 +68,6 @@ const emptyForm = (): FormState => ({
   categoryId: "",
   status: "approved",
   isActive: true,
-  description: { vi: "", en: "" },
   location: undefined,
 });
 const getPoiLatLng = (poi: Poi): LatLng | undefined => {
@@ -163,7 +160,6 @@ export default function AdminPoisPage() {
       categoryId: poi.categoryId || "",
       status: poi.status || "approved",
       isActive: poi.isActive,
-      description: (poi.description as any) || { vi: "", en: "" },
       location: getPoiLatLng(poi),
     });
     setShowForm(true);
@@ -174,7 +170,7 @@ export default function AdminPoisPage() {
     const payload = {
       ...form,
       location: form.location
-        ? { latitude: form.location.lat, longitude: form.location.lng }
+        ? { lat: form.location.lat, lng: form.location.lng }
         : undefined,
     };
     if (editId) {
@@ -506,40 +502,7 @@ export default function AdminPoisPage() {
                   onChange={(pos) => setForm((f) => ({ ...f, location: pos }))}
                 />
               </div>
-              {/* Description VI */}
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1.5">
-                  Mô tả chi tiết (Tiếng Việt)
-                </label>
-                <textarea
-                  value={form.description.vi}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      description: { ...f.description, vi: e.target.value },
-                    }))
-                  }
-                  rows={3}
-                  className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
-                />
-              </div>
-              {/* Description EN */}
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1.5">
-                  Mô tả chi tiết (English)
-                </label>
-                <textarea
-                  value={form.description.en}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      description: { ...f.description, en: e.target.value },
-                    }))
-                  }
-                  rows={3}
-                  className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/[0.06] rounded-xl text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all"
-                />
-              </div>
+              
             </div>
             {/* Footer */}
             <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/[0.06]">

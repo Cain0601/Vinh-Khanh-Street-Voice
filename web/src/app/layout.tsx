@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ToastProvider } from "@/components/Toast";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
+import AuthInit from "@/components/AuthInit";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -19,6 +20,8 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="h-screen flex flex-col">
+        {/* AuthInit runs the auth‑initialisation hook on the client side */}
+        <AuthInit />
         <ToastProvider>{children}</ToastProvider>
         <Toaster position="top-center" />
       </body>

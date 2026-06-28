@@ -8,6 +8,7 @@ import {
   updateAdminPoi,
   updatePoiStatus,
   deleteAdminPoi,
+  uploadAdminPoiImage,
 } from "@/lib/adminApi";
 import { cn } from "@/lib/cn";
 import {
@@ -48,7 +49,7 @@ type Poi = {
   isActive: boolean;
   rating?: number;
   reviewCount?: number;
-  mediaUrls?: string[];
+  mediaUrl?: string;
   audioUrl?: string;
   location?: { latitude?: number; longitude?: number; _latitude?: number; _longitude?: number };
 };
@@ -60,6 +61,7 @@ type FormState = {
   status: string;
   isActive: boolean;
   location?: LatLng;
+  imageUrl?: string;
 };
 const emptyForm = (): FormState => ({
   title: "",
@@ -69,6 +71,7 @@ const emptyForm = (): FormState => ({
   status: "approved",
   isActive: true,
   location: undefined,
+  imageUrl: "",
 });
 const getPoiLatLng = (poi: Poi): LatLng | undefined => {
   if (!poi.location) return undefined;
@@ -89,6 +92,21 @@ export default function AdminPoisPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview("");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [imageFile]);
   async function load() {
     setLoading(true);
     const [poisRes, catRes] = await Promise.all([getAdminPois(), getCategories()]);
@@ -149,6 +167,8 @@ export default function AdminPoisPage() {
   function openCreate() {
     setEditId(null);
     setForm(emptyForm());
+    setImageFile(null);
+    setError(null);
     setShowForm(true);
   }
   function openEdit(poi: Poi) {
@@ -161,26 +181,58 @@ export default function AdminPoisPage() {
       status: poi.status || "approved",
       isActive: poi.isActive,
       location: getPoiLatLng(poi),
+      imageUrl: poi.mediaUrl || "",
     });
+    setImageFile(null);
+    setError(null);
     setShowForm(true);
+  }
+  const currentImagePreview = imagePreview || form.imageUrl || "";
+  function handleImageChange(file: File | null) {
+    setImageFile(file);
   }
   async function handleSave() {
     if (!form.title) return;
     setSaving(true);
-    const payload = {
-      ...form,
-      location: form.location
-        ? { lat: form.location.lat, lng: form.location.lng }
-        : undefined,
-    };
-    if (editId) {
-      await updateAdminPoi(editId, payload);
-    } else {
-      await createAdminPoi(payload);
+    setError(null);
+    try {
+      const payload = {
+        title: form.title,
+        summary: form.summary || undefined,
+        address: form.address || undefined,
+        categoryId: form.categoryId || undefined,
+        status: form.status,
+        isActive: form.isActive,
+        location: form.location
+          ? { lat: form.location.lat, lng: form.location.lng }
+          : undefined,
+      };
+
+      const res = editId
+        ? await updateAdminPoi(editId, payload)
+        : await createAdminPoi(payload);
+
+      if (!res.success) {
+        setError(res.message ?? "Không thể lưu POI.");
+        return;
+      }
+
+      const poiId = editId ?? (res.data as any)?.id;
+      if (poiId && imageFile) {
+        const uploadRes = await uploadAdminPoiImage(poiId, imageFile);
+        if (!uploadRes.success) {
+          setError(uploadRes.message ?? "Đã lưu POI nhưng upload hình thất bại.");
+        }
+      }
+
+      setShowForm(false);
+      setImageFile(null);
+      await load();
+    } catch {
+      setError("Có lỗi xảy ra khi lưu POI.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setShowForm(false);
-    await load();
   }
   async function handleStatusChange(id: string, status: string) {
     await updatePoiStatus(id, status);
@@ -208,6 +260,11 @@ export default function AdminPoisPage() {
           Thêm địa điểm
         </button>
       </div>
+      {error && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          {error}
+        </div>
+      )}
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -291,9 +348,9 @@ export default function AdminPoisPage() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center shrink-0">
-                            {poi.mediaUrls?.[0] ? (
+                            {poi.mediaUrl ? (
                               <img
-                                src={poi.mediaUrls[0]}
+                                src={poi.mediaUrl}
                                 alt=""
                                 className="w-10 h-10 rounded-xl object-cover"
                               />
@@ -424,6 +481,11 @@ export default function AdminPoisPage() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              {error && (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                  {error}
+                </div>
+              )}
               {/* Title */}
               <div>
                 <label className="block text-xs text-muted-foreground mb-1.5">Tên địa điểm *</label>
@@ -469,6 +531,46 @@ export default function AdminPoisPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              {/* Image */}
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1.5">Thêm hình</label>
+                <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.02] p-4">
+                  <div className="mb-3 flex h-48 items-center justify-center overflow-hidden rounded-xl bg-black/20">
+                    {currentImagePreview ? (
+                      <img
+                        src={currentImagePreview}
+                        alt="Preview POI"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Chưa có hình</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Chọn ảnh để lưu lên Cloudinary
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-white/[0.06] px-4 py-2.5 text-sm font-medium text-foreground hover:bg-white/[0.1] transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+                    />
+                    <Plus size={16} />
+                    Chọn hình
+                  </label>
+                  {imageFile && (
+                    <button
+                      type="button"
+                      onClick={() => setImageFile(null)}
+                      className="ml-2 rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors">
+                      Gỡ ảnh mới
+                    </button>
+                  )}
+                </div>
               </div>
               {/* Status buttons */}
               <div>
@@ -588,6 +690,21 @@ export default function AdminPoisPage() {
                   <audio controls src={selectedPoi.audioUrl} className="w-full" />
                 </div>
               )}
+              {/* {selectedPoi.mediaUrls?.length ? (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Hình ảnh</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedPoi.mediaUrls.slice(0, 4).map((url, index) => (
+                      <img
+                        key={`${url}-${index}`}
+                        src={url}
+                        alt={`POI ${index + 1}`}
+                        className="h-28 w-full rounded-xl object-cover border border-white/[0.06]"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null} */}
               <div>
                 <p className="text-xs text-muted-foreground mb-1">ID</p>
                 <p className="text-xs text-muted-foreground font-mono">{selectedPoi.id}</p>

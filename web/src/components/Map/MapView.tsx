@@ -99,6 +99,7 @@ export interface POI {
   title: string;
   summary: string;
   audioUrl?: string;
+  mediaUrl?: string;
   categoryId?: string;
   lat?: number;
   lng?: number;
@@ -138,6 +139,7 @@ async function fetchDetailedPoi(basePoi: POI, language: string): Promise<POI> {
   const res = await getPoi(basePoi.id, language);
   if (res.success && res.data) {
     const p = res.data as any;
+    console.log("Fetched detailed POI:", p);
     return {
       id: p.id ?? basePoi.id,
       lat: p.location?.latitude ?? basePoi.lat,
@@ -148,6 +150,7 @@ async function fetchDetailedPoi(basePoi: POI, language: string): Promise<POI> {
       summary: getString(p.summary ?? p.description, language as any),
       audioUrl:
         getString(p.audioUrl ?? p.audioUrls, language as any) || getString(p.audioUrl, "vi"),
+      mediaUrl: p.mediaUrl ?? basePoi.mediaUrl,
       location: {
         latitude: p.location?.latitude ?? basePoi.location?.latitude,
         longitude: p.location?.longitude ?? basePoi.location?.longitude,

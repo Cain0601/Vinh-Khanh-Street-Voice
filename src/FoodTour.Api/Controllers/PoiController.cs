@@ -66,7 +66,7 @@ namespace FoodTour.Api.Controllers
                 {
                     p.Id, p.OwnerId, p.Title, p.Summary, p.Address,
                     p.Status, p.IsActive, p.Rating, p.ReviewCount,
-                    p.MediaUrls, p.CategoryId,
+                    p.MediaUrl, p.CategoryId,
                     translations = new[] { new { name = p.Title ?? "" } }
                 }).ToList();
 
@@ -185,11 +185,13 @@ namespace FoodTour.Api.Controllers
             if (existing == null)
                 return NotFound(new { success = false, message = "POI not found" });
 
+            if (existing.Summary != poi.Summary)
+            {
+                // Invalidate TTS cache since the text might have changed
+                await _ttsManager.InvalidateCacheAsync(id);
+            }
             poi.Id = id;
             var updated = await _repo.UpdateAsync(id, poi);
-
-            // Invalidate TTS cache since the text might have changed
-            await _ttsManager.InvalidateCacheAsync(id);
 
             return Ok(new { success = true, data = updated });
         }
@@ -203,6 +205,12 @@ namespace FoodTour.Api.Controllers
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
                 return NotFound(new { success = false, message = "POI not found" });
+
+            if (existing.Summary != updates.GetValueOrDefault("summary")?.ToString())
+            {
+                // Invalidate TTS cache since the text might have changed
+                await _ttsManager.InvalidateCacheAsync(id);
+            }
 
             // convert location object { lat, lng } into Firestore GeoPoint if present
             if (updates.TryGetValue("location", out var locObj) && locObj != null)
@@ -238,9 +246,6 @@ namespace FoodTour.Api.Controllers
 
             await _repo.UpdateFieldsAsync(id, updates);
             var updated = await _repo.GetByIdAsync(id);
-
-            // Invalidate TTS cache since the text might have changed
-            await _ttsManager.InvalidateCacheAsync(id);
 
             return Ok(new { success = true, data = updated });
         }
@@ -293,10 +298,9 @@ namespace FoodTour.Api.Controllers
                 if (string.IsNullOrEmpty(url))
                     return BadRequest(new { success = false, message = "Image upload failed" });
 
-                existing.MediaUrls ??= new List<string>();
-                existing.MediaUrls.Add(url);
+                existing.MediaUrl = (url);
 
-                var updates = new Dictionary<string, object> { { "mediaUrls", existing.MediaUrls } };
+                var updates = new Dictionary<string, object> { { "mediaUrl", existing.MediaUrl } };
                 await _repo.UpdateFieldsAsync(id, updates);
 
                 return Ok(new { success = true, data = new { imageUrl = url } });

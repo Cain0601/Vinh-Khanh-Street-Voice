@@ -3,6 +3,7 @@ using FoodTour.Api.DTOs;
 using FoodTour.Api.Models;
 using FoodTour.Api.Repositories;
 using System.Text.Json;
+using FoodTour.Api.Services;
 
 namespace FoodTour.Api.Controllers
 {
@@ -20,6 +21,7 @@ namespace FoodTour.Api.Controllers
         private readonly AnalyticsRepository _analyticsRepo;
         private readonly PoiRepository _poiRepo;
         private readonly SettingsRepository _settingsRepo;
+        private readonly TtsManagerService _ttsManager;
 
         public AdminController(
             UserRepository userRepo,
@@ -28,7 +30,8 @@ namespace FoodTour.Api.Controllers
             AuditRepository auditRepo,
             AnalyticsRepository analyticsRepo,
             PoiRepository poiRepo,
-            SettingsRepository settingsRepo)
+            SettingsRepository settingsRepo,
+            TtsManagerService ttsManager)
         {
             _userRepo = userRepo;
             _categoryRepo = categoryRepo;
@@ -37,6 +40,7 @@ namespace FoodTour.Api.Controllers
             _analyticsRepo = analyticsRepo;
             _poiRepo = poiRepo;
             _settingsRepo = settingsRepo;
+            _ttsManager = ttsManager;
         }
 
         private string GetAdminId() => HttpContext.Items["UserId"]?.ToString() ?? "";
@@ -538,6 +542,11 @@ namespace FoodTour.Api.Controllers
             if (existing == null)
                 return NotFound(ApiResponse.Fail("POI not found"));
 
+            if (existing.Summary != dto.Summary)
+            {
+                // Invalidate TTS cache since the text might have changed
+                await _ttsManager.InvalidateCacheAsync(id);
+            }
             var poi = new Poi
             {
                 Id = id,
@@ -549,7 +558,7 @@ namespace FoodTour.Api.Controllers
                 AudioUrl = dto.AudioUrl ?? existing.AudioUrl,
                 Status = string.IsNullOrWhiteSpace(dto.Status) ? existing.Status : dto.Status,
                 IsActive = dto.IsActive ?? existing.IsActive,
-                MediaUrls = existing.MediaUrls,
+                MediaUrl = existing.MediaUrl,
                 QrCode = existing.QrCode,
                 Rating = existing.Rating,
                 ReviewCount = existing.ReviewCount,

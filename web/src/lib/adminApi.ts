@@ -99,6 +99,12 @@ export async function deleteAdminPoi(id: string) {
   return api.del<any>(`/admin/pois/${id}`);
 }
 
+export async function uploadAdminPoiImage(poiId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post<any>(`/api/pois/${poiId}/image`, formData);
+}
+
 // ─── System Settings ───
 export async function getSystemSettings() {
   return api.get<any>("/admin/settings");

@@ -6,26 +6,12 @@ import { HubConnectionBuilder, HubConnection, LogLevel } from "@microsoft/signal
 import { useTranslation } from "@/i18n";
 import PoiAudioDrawer from "@/components/Map/PoiAudioDrawer";
 import { usePoiAudioQueue } from "@/hooks/usePoiAudioQueue";
+import { getAuthToken, getHubUrl, getVisitorId } from "@/lib/signalr";
 
 const MapView = dynamic(() => import("@/components/Map/MapView"), {
   ssr: false,
   loading: () => <div className="h-80 bg-slate-800" />,
 });
-
-const VISITOR_ID_KEY = "ft_visitor_id";
-
-function getVisitorId() {
-  let visitorId = window.localStorage.getItem(VISITOR_ID_KEY);
-  if (!visitorId) {
-    visitorId =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    window.localStorage.setItem(VISITOR_ID_KEY, visitorId);
-  }
-
-  return visitorId;
-}
 
 function MapPageContent() {
   const [internalUserPos, setInternalUserPos] = useState<[number, number] | null>(null);
@@ -46,18 +32,10 @@ function MapPageContent() {
   } = usePoiAudioQueue();
 
   useEffect(() => {
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("ft_token="))
-      ?.split("=")[1];
-    const hubUrl = new URL(
-      "/hubs/location",
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190",
-    );
-    hubUrl.searchParams.set("visitorId", getVisitorId());
+    const hubUrl = getHubUrl("/hubs/location", { visitorId: getVisitorId() });
 
     const conn = new HubConnectionBuilder()
-      .withUrl(hubUrl.toString(), { accessTokenFactory: () => token || "" })
+      .withUrl(hubUrl, { accessTokenFactory: getAuthToken })
       .configureLogging(LogLevel.Information)
       .withAutomaticReconnect()
       .build();

@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { HubConnectionBuilder, LogLevel, HubConnection } from "@microsoft/signalr";
 import { getHeatmapData } from "@/lib/adminApi";
+import { getAuthToken, getHubUrl } from "@/lib/signalr";
 import { Flame, MapPin, Users } from "lucide-react";
 
 const HeatmapMap = dynamic(() => import("./HeatmapMap"), {
@@ -46,14 +47,9 @@ export default function AdminHeatmapPage() {
     })();
 
     // SignalR Setup
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("ft_token="))
-      ?.split("=")[1];
-
-    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+    const hubUrl = getHubUrl("/hubs/location");
     const conn = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .withUrl(hubUrl, { accessTokenFactory: getAuthToken })
       .configureLogging(LogLevel.Information)
       .withAutomaticReconnect()
       .build();

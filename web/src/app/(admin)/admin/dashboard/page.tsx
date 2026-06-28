@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { HubConnectionBuilder, LogLevel, HubConnection } from "@microsoft/signalr";
+import { getAuthToken, getHubUrl } from "@/lib/signalr";
 import {
   getAnalyticsSummary,
   getTopPois,
@@ -66,14 +67,9 @@ export default function AdminDashboard() {
     load();
 
     // SignalR real-time updates
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("ft_token="))
-      ?.split("=")[1];
-
-    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+    const hubUrl = getHubUrl("/hubs/location");
     const conn = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .withUrl(hubUrl, { accessTokenFactory: getAuthToken })
       .configureLogging(LogLevel.None)
       .withAutomaticReconnect()
       .build();

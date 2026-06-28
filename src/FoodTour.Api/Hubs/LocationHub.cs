@@ -22,15 +22,15 @@ namespace FoodTour.Api.Hubs
             // Role may be resolved by middleware if token is valid; otherwise we mark as GUEST.
             var userRole = (httpContext?.Items["UserRole"]?.ToString() ?? "GUEST").ToUpperInvariant();
 
-            if (userRole == "ADMIN" || userRole == "OWNER")
+            if (userRole == "ADMIN")
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
                 _logger.LogInformation($"Admin connected to LocationHub: {Context.ConnectionId}");
             }
             else
             {
-                // Count unique users/devices, not raw SignalR connections.
-                // The map page opens a second connection to send location updates.
+                // Count unique devices, not raw SignalR connections.
+                // A device can open multiple connections (global tracker + map location sender).
                 var clientKey = GetClientKey(httpContext);
                 var connections = _onlineClients.GetOrAdd(clientKey, _ => new ConcurrentDictionary<string, byte>());
                 MergeVisitorConnectionsIntoUser(httpContext, clientKey, connections);
@@ -100,16 +100,16 @@ namespace FoodTour.Api.Hubs
 
         private string GetClientKey(HttpContext? httpContext)
         {
-            var userId = httpContext?.Items["UserId"]?.ToString();
-            if (!string.IsNullOrWhiteSpace(userId))
-            {
-                return $"user:{userId}";
-            }
-
             var visitorId = httpContext?.Request.Query["visitorId"].ToString();
             if (!string.IsNullOrWhiteSpace(visitorId))
             {
                 return $"visitor:{visitorId}";
+            }
+
+            var userId = httpContext?.Items["UserId"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                return $"user:{userId}";
             }
 
             return $"connection:{Context.ConnectionId}";

@@ -9,7 +9,7 @@ interface PoiDetailProps {
   id: string
   name: string
   description?: string
-  images?: string[]
+  mediaUrl?: string[]
   category: string
   address: string
   distance: number
@@ -19,9 +19,10 @@ interface PoiDetailProps {
 }
 
 export default function PoiDetail({
+  id,
   name,
   description,
-  images = [],
+  mediaUrl,
   category,
   address,
   distance,
@@ -89,8 +90,8 @@ export default function PoiDetail({
   }
 
   const coverImage =
-    images.length > 0
-      ? images[0]
+    mediaUrl && mediaUrl.length > 0
+      ? mediaUrl
       : 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee'
 
   return (
@@ -99,7 +100,7 @@ export default function PoiDetail({
       {/* Hero Section */}
       <div className="relative h-[45vh] overflow-hidden">
         <img
-          src={coverImage}
+          src={coverImage as string}
           alt={name}
           className="
           w-full
@@ -154,7 +155,7 @@ export default function PoiDetail({
         </button>
       )}
 
-      <div className="px-5 pb-10 -mt-8 relative z-10">
+      <div className="px-5 pb-10 -mt-8 relative z-10 overflow-y-auto">
         {/* Audio Player */}
         {audioUrl && (
           <div
@@ -258,7 +259,7 @@ export default function PoiDetail({
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-4">
           <Link
-            href="/map"
+            href={`/map?poiId=${encodeURIComponent(id)}`}
             className="
             bg-emerald-500
             hover:bg-emerald-600

@@ -12,7 +12,7 @@ import { Heart, Star, MapPin } from 'lucide-react'
 interface Poi {
   id: string
   name?: string
-  image?: string
+  mediaUrl?: string
   category?: string
   rating?: number
   distance?: number
@@ -27,7 +27,7 @@ interface Poi {
 interface RestaurantCarouselProps {
   restaurants: Pick<
     Poi,
-    'id' | 'name' | 'image' | 'category' | 'rating' | 'distance'
+    'id' | 'name' | 'mediaUrl' | 'category' | 'rating' | 'distance'
   >[]
   /** Set of bookmarked POI ids, provided by the parent page. */
   bookmarkedIds?: Set<string>
@@ -72,13 +72,13 @@ export default function RestaurantCarousel({
             <Link
               key={restaurant.id}
               href={`/pois/${restaurant.id}`}
-              className="shrink-0 w-64 md:w-auto snap-start group"
+              className="shrink-0 w-64 snap-start group"
             >
               <div className="rounded-lg overflow-hidden bg-slate-800 border border-slate-700 hover:border-emerald-500 transition-all">
                 {/* Image */}
                 <div className="relative h-40 md:h-48 bg-slate-700 overflow-hidden">
                   <img
-                    src={restaurant.image ?? placeholderImg}
+                    src={restaurant.mediaUrl ?? placeholderImg}
                     alt={restaurant.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {

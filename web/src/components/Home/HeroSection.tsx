@@ -16,7 +16,7 @@ export default function HeroSection({ defaultQuery = 'phở ẩm thực Vĩnh Kh
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
-      router.push(`/customer/map?search=${encodeURIComponent(query)}`)
+      router.push(`/map?search=${encodeURIComponent(query)}`)
     }
   }
 

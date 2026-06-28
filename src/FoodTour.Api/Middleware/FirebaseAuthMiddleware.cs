@@ -18,10 +18,8 @@ namespace FoodTour.Api.Middleware
             "/swagger",
             "/openapi",
             "/weatherforecast",
-            "/setup",           // Dev-only setup endpoints
             "/api/pois",        // Public read for POIs
-            "/api/categories",  // Public read for categories
-            "/hubs/"            // SignalR hubs — allow anonymous connection, roles handled inside hub
+            "/api/categories"   // Public read for categories
         };
 
         // Paths that always require auth — checked BEFORE PublicPaths
@@ -68,14 +66,6 @@ namespace FoodTour.Api.Middleware
             //     }
             // }
 
-            // SignalR hubs: allow anonymous but still try to resolve user identity from token
-            if (path.StartsWith("/hubs/"))
-            {
-                await TryResolveHubIdentityAsync(context);
-                await _next(context);
-                return;
-            }
-
             // Allow public GET endpoints without auth
             if (IsPublicEndpoint(path, method))
             {
@@ -92,23 +82,13 @@ namespace FoodTour.Api.Middleware
 
             // Extract Bearer token
             var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
-            var token = string.Empty;
-
-            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
             {
-                token = authHeader.Substring("Bearer ".Length).Trim();
-            }
-            else if (path.StartsWith("/hubs/") && context.Request.Query.TryGetValue("access_token", out var accessToken))
-            {
-                // SignalR sends token in query string
-                token = accessToken.ToString();
-            }
-
-            if (string.IsNullOrEmpty(token))
-            {
-                await WriteUnauthorized(context, "Missing or invalid authorization token.");
+                await WriteUnauthorized(context, "Missing or invalid authorization header.");
                 return;
             }
+
+            var token = authHeader.Substring("Bearer ".Length).Trim();
 
             // // If Firebase Admin SDK is not initialized (missing service_account.json),
             // // fall back to dev-owner in Development; block in Production.
@@ -202,66 +182,10 @@ namespace FoodTour.Api.Middleware
             }
         }
 
-        /// <summary>
-        /// For SignalR hubs: attempt to resolve user identity from Bearer or query-string token.
-        /// Does NOT block the request if no token is present (anonymous is allowed).
-        /// </summary>
-        private async Task TryResolveHubIdentityAsync(HttpContext context)
-        {
-            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
-            var token = string.Empty;
-
-            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
-            {
-                token = authHeader.Substring("Bearer ".Length).Trim();
-            }
-            else if (context.Request.Query.TryGetValue("access_token", out var accessToken))
-            {
-                token = accessToken.ToString();
-            }
-
-            if (string.IsNullOrEmpty(token)) return; // anonymous — do nothing
-
-            try
-            {
-                var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
-
-                var firestoreService = context.RequestServices.GetRequiredService<Services.FirestoreService>();
-                var db = firestoreService.Db;
-                var email = decodedToken.Claims.TryGetValue("email", out var em) ? em?.ToString() : "";
-                if (!string.IsNullOrEmpty(email))
-                {
-                    var snapshot = await db.Collection("users").WhereEqualTo("email", email).Limit(1).GetSnapshotAsync();
-                    if (snapshot.Documents.Count > 0)
-                    {
-                        var userDoc = snapshot.Documents[0];
-                        var userData = userDoc.ConvertTo<Models.User>();
-                        userData.Id = userDoc.Id;
-                        context.Items["UserId"]   = userData.Id;
-                        context.Items["UserRole"] = userData.Role;
-                        context.Items["UserData"] = userData;
-                    }
-                    else
-                    {
-                        context.Items["UserId"]   = decodedToken.Uid;
-                        context.Items["UserRole"] = "USER";
-                    }
-                }
-            }
-            catch
-            {
-                // Invalid/expired token — treat as anonymous, don't block
-            }
-        }
-
         private bool IsPublicEndpoint(string path, string method)
         {
             // Health, swagger, openapi are always public
             if (path == "/health" || path.StartsWith("/swagger") || path.StartsWith("/openapi"))
-                return true;
-
-            // SignalR hubs — allow all connections; roles resolved inside the hub
-            if (path.StartsWith("/hubs/"))
                 return true;
 
             // GET requests to public POI/category endpoints

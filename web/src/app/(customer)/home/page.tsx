@@ -36,7 +36,7 @@ export default function HomePage() {
         const mapped = data.map((p) => ({
           id: p.id,
           name: p.title ?? 'Untitled',
-          image: p.image ?? placeholderImg,
+          mediaUrl: p.mediaUrl ?? placeholderImg,
           category: p.categoryId ?? 'Other',
           rating: p.rating ?? 0,
           distance: p.distance ?? 0,

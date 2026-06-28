@@ -13,6 +13,7 @@ interface Poi {
   title?: string
   summary?: string
   audioUrl?: string
+  mediaUrl?: string
   rating?: number
   reviewCount?: number
   address?: string
@@ -111,7 +112,7 @@ export default function PoiDetailPage() {
     id: poi.id,
     name: poi.title ?? 'Untitled',
     description: (poi as any).summary ?? '',
-    images: [], // API does not provide images; could be added later
+    mediaUrl: (poi as any).mediaUrl ?? '',
     category: (poi as any).categoryId ?? 'Other',
     rating: poi.rating ?? 0,
     reviewCount: poi.reviewCount ?? 0,

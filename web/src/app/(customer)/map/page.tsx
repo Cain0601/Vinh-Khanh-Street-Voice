@@ -1,205 +1,111 @@
 'use client'
 
-import { useEffect, useState, useRef, useMemo, Suspense } from 'react';
-import { useTranslation } from '@/i18n';
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, type RefObject, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr'
-import Header from '@/components/Layout/Header'
-import MapFilters from '@/components/Map/MapFilters'
-import RestaurantList from '@/components/Map/RestaurantList'
+import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr'
+import { useTranslation } from '@/i18n'
 import PoiAudioDrawer from '@/components/Map/PoiAudioDrawer'
 import { usePoiAudioQueue } from '@/hooks/usePoiAudioQueue'
 
-const MapView = dynamic(() => import('@/components/Map/MapView'), { ssr: false, loading: () => <div className="h-80 bg-slate-800" /> })
-
-
-// Mock data - replace with API call
-const mockRestaurants = [
-  {
-    id: '1',
-    name: 'Phở Việt Nam Restaurant',
-    image: 'https://via.placeholder.com/300x200?text=Pho+Vietnam',
-    category: 'Phở',
-    rating: 4.8,
-    distance: 0.5,
-  },
-  {
-    id: '2',
-    name: 'Street Food Corner',
-    image: 'https://via.placeholder.com/300x200?text=Street+Food',
-    category: 'Street Food',
-    rating: 4.5,
-    distance: 1.2,
-  },
-  {
-    id: '3',
-    name: 'Bánh Mì House',
-    image: 'https://via.placeholder.com/300x200?text=Banh+Mi',
-    category: 'Bánh Mì',
-    rating: 4.6,
-    distance: 0.8,
-  },
-  {
-    id: '4',
-    name: 'Cơm Chiên Palace',
-    image: 'https://via.placeholder.com/300x200?text=Com+Chien',
-    category: 'Cơm',
-    rating: 4.7,
-    distance: 1.5,
-  },
-  {
-    id: '5',
-    name: 'Gà Nướng Tây Sơn',
-    image: 'https://via.placeholder.com/300x200?text=Ga+Nuong',
-    category: 'Gà',
-    rating: 4.9,
-    distance: 0.3,
-  },
-  {
-    id: '6',
-    name: 'Cà Phê Sáng',
-    image: 'https://via.placeholder.com/300x200?text=Ca+Phe',
-    category: 'Cà phê',
-    rating: 4.7,
-    distance: 0.7,
-  },
-]
-
-const categoryMap: Record<string, string> = {
-  all: 'Tất cả',
-  pho: 'Phở',
-  ga: 'Gà',
-  com: 'Cơm',
-  'banh-mi': 'Bánh Mì',
-  coffee: 'Cà phê',
-}
+const MapView = dynamic(() => import('@/components/Map/MapView'), {
+  ssr: false,
+  loading: () => <div className="h-80 bg-slate-800" />,
+})
 
 function MapPageContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const initialSearch = searchParams.get('search') || ''
+  const [internalUserPos, setInternalUserPos] = useState<[number, number] | null>(null)
+  const connectionRef = useRef<HubConnection | null>(null)
+  const {
+    currentPoi,
+    queue,
+    currentIndex,
+    isPlaying,
+    audioRef,
+    currentTime,
+    duration,
+    enqueue,
+    skip,
+    play,
+    pause,
+    clearQueue,
+  } = usePoiAudioQueue()
 
-  const [searchQuery, setSearchQuery] = useState(initialSearch)
-  const [activeFilter, setActiveFilter] = useState('all')
-  const [showList, setShowList] = useState(!!initialSearch)
-  const [internalUserPos, setInternalUserPos] = useState<[number, number] | null>(null);
-
-  const { currentPoi, queue, currentIndex, isPlaying, audioRef, currentTime, duration, enqueue, skip, play, pause, clearQueue } = usePoiAudioQueue();
-
-  const connectionRef = useRef<HubConnection | null>(null);
-
-  // SignalR setup for sending user location to admin dashboard
   useEffect(() => {
     const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("ft_token="))
-      ?.split("=")[1];
-    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
+      .split('; ')
+      .find((row) => row.startsWith('ft_token='))
+      ?.split('=')[1]
+
+    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5190') + '/hubs/location'
     const conn = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
+      .withUrl(hubUrl, { accessTokenFactory: () => token || '' })
       .configureLogging(LogLevel.Information)
       .withAutomaticReconnect()
-      .build();
-    conn.start()
-      .then(() => console.log("Connected to LocationHub (Map page)"))
-      .catch((err) => console.error("SignalR connection error:", err));
-    connectionRef.current = conn;
+      .build()
+
+    conn
+      .start()
+      .then(() => console.log('Connected to LocationHub (Map page)'))
+      .catch((err) => console.error('SignalR connection error:', err))
+
+    connectionRef.current = conn
+
     return () => {
-      conn.stop();
-    };
-  }, []);
-
-  // Helper to send location via SignalR
-  const sendLocation = (lat: number, lng: number) => {
-    if (connectionRef.current) {
-      connectionRef.current.invoke("SendLocation", lat, lng).catch((err) => {
-        console.error("Error sending location:", err);
-      });
+      conn.stop()
     }
-  };
+  }, [])
 
-  // Filter restaurants based on search and category
-  const filteredRestaurants = useMemo(() => {
-    return mockRestaurants.filter((restaurant) => {
-      const matchesSearch =
-        searchQuery.trim() === '' ||
-        restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        restaurant.category.toLowerCase().includes(searchQuery.toLowerCase())
+  const sendLocation = (lat: number, lng: number) => {
+    if (!connectionRef.current) return
 
-      const matchesCategory =
-        activeFilter === 'all' || restaurant.category.toLowerCase().includes(categoryMap[activeFilter].toLowerCase())
-
-      return matchesSearch && matchesCategory
+    connectionRef.current.invoke('SendLocation', lat, lng).catch((err) => {
+      console.error('Error sending location:', err)
     })
-  }, [searchQuery, activeFilter])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setShowList(true)
   }
 
   return (
-    <div className="h-[calc(100dvh-60px)] flex flex-col relative bg-slate-900">
-      {/* Header */}
-      {/* <Header title="Bản đồ" showBack onBack={() => router.push("/home")} /> */}
-
-      {/* Map or List View */}
-      {showList ? (
-        <RestaurantList
-          restaurants={filteredRestaurants}
-          isVisible={showList}
-          onClose={() => {
-            setShowList(false)
-            setSearchQuery('')
-          }}
-        />
-      ) : (
-        <div className="flex-1 relative bg-slate-800">
-          <div className="absolute inset-0">
-            <MapView
+    <div className="relative h-[calc(100dvh-60px)] overflow-hidden bg-slate-900">
+      <div className="absolute inset-0">
+        <MapView
           userPos={internalUserPos}
           pois={[]}
           onTriggerAudio={enqueue}
           onMapClick={(lat, lng) => {
-            // Update internal position for manual mode if needed
-            setInternalUserPos([lat, lng]);
-            // Send location to server
-            sendLocation(lat, lng);
+            setInternalUserPos([lat, lng])
+            sendLocation(lat, lng)
           }}
         />
-          </div>
-          
-          <PoiAudioDrawer 
-            isOpen={queue.length > 0} 
-            onClose={clearQueue} 
-            currentPoi={currentPoi} 
-            queuePois={queue} 
-            currentIndex={currentIndex}
-            isPlaying={isPlaying} 
-            onSkip={skip} 
-            onPlay={play} 
-            onPause={pause} 
-            audioRef={audioRef as React.RefObject<HTMLAudioElement>}
-            currentTime={currentTime}
-            duration={duration}
-          />
-          <div className="relative z-10 p-4">
-            <div className="text-white">
-              <h2 className="text-xl font-bold">Bản đồ Vĩnh Khánh</h2>
-              <p className="text-slate-400 text-sm">Hiển thị {filteredRestaurants.length} quán trong khu vực</p>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
+
+      <PoiAudioDrawer
+        isOpen={queue.length > 0}
+        onClose={clearQueue}
+        currentPoi={currentPoi}
+        queuePois={queue}
+        currentIndex={currentIndex}
+        isPlaying={isPlaying}
+        onSkip={skip}
+        onPlay={play}
+        onPause={pause}
+        audioRef={audioRef as RefObject<HTMLAudioElement>}
+        currentTime={currentTime}
+        duration={duration}
+      />
     </div>
   )
 }
 
 export default function MapPage() {
-  const t = useTranslation();
+  const t = useTranslation()
+
   return (
-    <Suspense fallback={<div className="h-screen bg-slate-900 flex items-center justify-center text-white">{t.map.loading}</div>}>
+    <Suspense
+      fallback={
+        <div className="h-screen bg-slate-900 flex items-center justify-center text-white">
+          {t.map.loading}
+        </div>
+      }
+    >
       <MapPageContent />
     </Suspense>
   )

@@ -92,9 +92,13 @@ export default function PoiAudioDrawer({
           {/* Thumbnail */}
           <div className="w-12 h-12 rounded bg-slate-700 shrink-0 overflow-hidden">
             {/* Show title as placeholder, no image available */}
-            <div className="w-full h-full flex items-center justify-center text-slate-500">
-              <MapPin size={24} />
-            </div>
+            {currentPoi.mediaUrl ? (
+              <img src={currentPoi.mediaUrl} alt={currentPoi.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-500">
+                <MapPin size={24} />
+              </div>
+            )}
           </div>
 
           {/* Info */}
@@ -157,11 +161,14 @@ export default function PoiAudioDrawer({
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {/* Cover Image */}
         <div className="w-full aspect-square bg-slate-800 rounded-2xl shadow-2xl overflow-hidden mb-8 mt-4">
-          {/* No image available; display placeholder */}
-          <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">
-            <MapPin size={64} className="mb-4" />
-             <p>{t.poiDrawer.noImage}</p>
-          </div>
+          {currentPoi.mediaUrl ? (
+            <img src={currentPoi.mediaUrl} alt={currentPoi.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">
+              <MapPin size={64} className="mb-4" />
+               <p>{t.poiDrawer.noImage}</p>
+            </div>
+          )}
         </div>
 
         {/* Title & Queue indicator */}

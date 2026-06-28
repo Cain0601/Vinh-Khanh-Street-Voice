@@ -18,10 +18,11 @@ namespace FoodTour.Api.Controllers
         }
 
         // ── NEW: GET /menu-items/owner/list ──────────────────────────────────────
-        // Frontend: menu/page.tsx gọi /menu-items/owner/list?search=&page=1&limit=12
+        // Frontend: menu/page.tsx gọi /menu-items/owner/list?search=&poiId=XXX&page=1&limit=12
         [HttpGet("/menu-items/owner/list")]
         public async Task<IActionResult> GetOwnerMenuItems(
             [FromQuery] string? search = null,
+            [FromQuery] string? poiId = null,
             [FromQuery] int page = 1,
             [FromQuery] int limit = 12)
         {
@@ -32,9 +33,14 @@ namespace FoodTour.Api.Controllers
             var ownerPois = await _poiRepo.GetByOwnerAsync(userId);
             var allItems  = new List<object>();
 
-            foreach (var poi in ownerPois)
+            // Nếu có poiId, chỉ lấy menu items của POI đó
+            if (!string.IsNullOrEmpty(poiId))
             {
-                var items = await _repo.GetByPoiIdAsync(poi.Id);
+                var selectedPoi = ownerPois.FirstOrDefault(p => p.Id == poiId);
+                if (selectedPoi == null)
+                    return Unauthorized(new { success = false, message = "Bạn không có quyền truy cập POI này" });
+
+                var items = await _repo.GetByPoiIdAsync(poiId);
                 foreach (var item in items)
                 {
                     var nameStr = item.Name.TryGetValue("vi", out var vi) ? vi
@@ -55,10 +61,43 @@ namespace FoodTour.Api.Controllers
                         imageUrl    = item.MediaUrl,
                         poi = new
                         {
-                            id           = poi.Id,
-                            translations = new[] { new { name = poi.Title ?? "" } }
+                            id           = selectedPoi.Id,
+                            translations = new[] { new { name = selectedPoi.Title ?? "" } }
                         }
                     });
+                }
+            }
+            else
+            {
+                // Nếu không có poiId, lấy tất cả menu items của tất cả POI
+                foreach (var poi in ownerPois)
+                {
+                    var items = await _repo.GetByPoiIdAsync(poi.Id);
+                    foreach (var item in items)
+                    {
+                        var nameStr = item.Name.TryGetValue("vi", out var vi) ? vi
+                                    : item.Name.Values.FirstOrDefault() ?? "";
+                        var descStr = item.Description != null
+                            ? (item.Description.TryGetValue("vi", out var dvi) ? dvi
+                               : item.Description.Values.FirstOrDefault())
+                            : null;
+
+                        allItems.Add(new
+                        {
+                            item.Id,
+                            poiId       = item.PoiId,
+                            name        = nameStr,
+                            price       = item.Price,
+                            isAvailable = item.IsActive,
+                            description = descStr,
+                            imageUrl    = item.MediaUrl,
+                            poi = new
+                            {
+                                id           = poi.Id,
+                                translations = new[] { new { name = poi.Title ?? "" } }
+                            }
+                        });
+                    }
                 }
             }
 

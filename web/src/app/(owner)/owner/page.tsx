@@ -77,33 +77,33 @@ export default function OwnerDashboard() {
   const stats = useMemo(
     () => [
       {
-        label: "Total POIs",
+        label: "Tổng POI",
         value: dashboard.stats.totalPois.toLocaleString(),
-        changeText: `${dashboard.stats.activeRate}% active`,
+        changeText: `${dashboard.stats.activeRate}% đang hoạt động`,
         icon: MapPin,
         color: "blue",
       },
       {
-        label: "Menu Items",
+        label: "Món ăn",
         value: dashboard.stats.totalMenuItems.toLocaleString(),
         changeText:
           dashboard.stats.totalPois > 0
-            ? `${(dashboard.stats.totalMenuItems / dashboard.stats.totalPois).toFixed(1)} avg/POI`
-            : "0 avg/POI",
+            ? `${(dashboard.stats.totalMenuItems / dashboard.stats.totalPois).toFixed(1)} trung bình/POI`
+            : "0 trung bình/POI",
         icon: Utensils,
         color: "orange",
       },
       {
-        label: "Avg Rating",
+        label: "Điểm trung bình",
         value: dashboard.stats.avgRating.toFixed(2),
-        changeText: "out of 5.0",
+        changeText: "trên 5.0",
         icon: Star,
         color: "yellow",
       },
       {
-        label: "Active POIs",
+        label: "POI đang hoạt động",
         value: dashboard.stats.activePois.toLocaleString(),
-        changeText: `${dashboard.stats.activeRate}% of total`,
+        changeText: `${dashboard.stats.activeRate}% tổng số`,
         icon: TrendingUp,
         color: "green",
       },
@@ -116,10 +116,10 @@ export default function OwnerDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back, {user?.fullName?.split(" ")[0] || "Owner"}!
+            Chào mừng, {user?.fullName?.split(" ")[0] || "Chủ quán"}!
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Here is your live business overview from the backend.
+            Đây là tổng quan hoạt động kinh doanh trực tiếp từ hệ thống.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -132,13 +132,13 @@ export default function OwnerDashboard() {
             ) : (
               <RefreshCw className="w-5 h-5" />
             )}{" "}
-            Refresh
+            Làm mới
           </button>
           <Link
             href="/owner/pois"
             className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-semibold shadow-lg shadow-orange-200 hover:bg-orange-600 transition-all hover:-translate-y-0.5 active:translate-y-0"
           >
-            <Plus className="w-5 h-5" /> Add New POI
+            <Plus className="w-5 h-5" /> Thêm POI mới
           </Link>
         </div>
       </div>
@@ -156,7 +156,7 @@ export default function OwnerDashboard() {
                 <stat.icon className="w-6 h-6" />
               </div>
               <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg">
-                <Activity className="w-3.5 h-3.5" /> Live
+                <Activity className="w-3.5 h-3.5" /> Trực tiếp
               </div>
             </div>
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -175,19 +175,19 @@ export default function OwnerDashboard() {
       <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            POIs vs Menu Items (7 days)
+            POI và Món ăn (7 ngày)
           </h2>
           <div className="flex gap-4">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
               <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                POIs
+                POI
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
               <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Menu Items
+                Món ăn
               </span>
             </div>
           </div>

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getOwnerPois } from "@/lib/api";
-
+import { getOwnerPois } from "@/lib/api/owner";
 
 type Poi = {
   id: string;
@@ -11,6 +10,15 @@ type Poi = {
   name?: string;
   address?: string;
   status?: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+  mediaUrl?: string;
+  mediaUrls?: string[];
+  // Đã bổ sung trường này để không bị lỗi build "Property 'translations' does not exist"
+  translations?: Array<{
+    imageUrl?: string;
+    [key: string]: any;
+  }>;
 };
 
 export default function OwnerPoisPage() {
@@ -77,37 +85,64 @@ export default function OwnerPoisPage() {
       )}
 
       <ul className="space-y-3">
-        {pois.map((poi) => (
-          <li
-            key={poi.id}
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <Link
-              href={`/owner/pois/${poi.id}`}
-              className="flex items-center justify-between"
+        {pois.map((poi) => {
+          const coverImage =
+            poi.mediaUrls?.[0] ||
+            poi.imageUrls?.find(Boolean) ||
+            poi.mediaUrl ||
+            poi.imageUrl ||
+            (poi as any).MediaUrls?.[0] ||
+            (poi as any).ImageUrl ||
+            poi.translations?.[0]?.imageUrl ||
+            undefined;
+          const initial = (poi.title || poi.name || poi.id || "?").charAt(0).toUpperCase();
+
+          return (
+            <li
+              key={poi.id}
+              className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div>
-                <p className="font-semibold text-slate-800">
-                  {poi.title ?? poi.name ?? poi.id}
-                </p>
-                {poi.address && (
-                  <p className="text-sm text-slate-500">{poi.address}</p>
-                )}
-              </div>
-              <span
-                className={`text-xs font-medium px-2 py-1 rounded-full ${
-                  poi.status === "ACTIVE"
-                    ? "bg-green-100 text-green-700"
-                    : poi.status === "PENDING"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-slate-100 text-slate-600"
-                }`}
-              >
-                {poi.status ?? "—"}
-              </span>
-            </Link>
-          </li>
-        ))}
+              <Link href={`/owner/pois/${poi.id}`} className="flex items-center gap-4">
+                <div className="flex-shrink-0">
+                  {coverImage ? (
+                    <img
+                      src={coverImage}
+                      alt={poi.title ?? poi.name ?? "poi"}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-semibold uppercase">
+                      {initial}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 truncate">
+                    {poi.title ?? poi.name ?? poi.id}
+                  </p>
+                  {poi.address && (
+                    <p className="text-sm text-slate-500 truncate">{poi.address}</p>
+                  )}
+                </div>
+
+                <div className="flex-shrink-0">
+                  <span
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${
+                      poi.status === "ACTIVE"
+                        ? "bg-green-100 text-green-700"
+                        : poi.status === "PENDING"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {poi.status ?? "—"}
+                  </span>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

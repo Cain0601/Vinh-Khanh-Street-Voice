@@ -46,8 +46,8 @@ namespace FoodTour.Api.Models
         [FirestoreProperty("isActive")]
         public bool IsActive { get; set; } = true;
 
-        [FirestoreProperty("mediaUrls")]
-        public List<string>? MediaUrls { get; set; }
+        [FirestoreProperty("mediaUrl")]
+        public string? MediaUrl { get; set; }
 
         [FirestoreProperty("qrCode")]
         public string? QrCode { get; set; }

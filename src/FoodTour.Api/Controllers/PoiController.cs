@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using FoodTour.Api.Models;
 using FoodTour.Api.Repositories;
 using FoodTour.Api.Services;
+using FoodTour.Api.DTOs;
 namespace FoodTour.Api.Controllers
 {
     [ApiController]
@@ -11,15 +12,18 @@ namespace FoodTour.Api.Controllers
         private readonly PoiRepository _repo;
         private readonly TtsManagerService _ttsManager;
         private readonly CloudinaryService _cloudinary;
+        private readonly AdminSettingsService _adminSettings;
         
         public PoiController(
-            PoiRepository repo, 
-            TtsManagerService ttsManager, 
-            CloudinaryService cloudinary)
+            PoiRepository repo,
+            TtsManagerService ttsManager,
+            CloudinaryService cloudinary,
+            AdminSettingsService adminSettings)
         {
             _repo = repo;
             _ttsManager = ttsManager;
             _cloudinary = cloudinary;
+            _adminSettings = adminSettings;
         }
 
         // ── NEW: GET /pois/owner/list ────────────────────────────────────────────
@@ -62,7 +66,7 @@ namespace FoodTour.Api.Controllers
                 {
                     p.Id, p.OwnerId, p.Title, p.Summary, p.Address,
                     p.Status, p.IsActive, p.Rating, p.ReviewCount,
-                    p.MediaUrls, p.CategoryId,
+                    p.MediaUrl, p.CategoryId,
                     translations = new[] { new { name = p.Title ?? "" } }
                 }).ToList();
 
@@ -148,10 +152,24 @@ namespace FoodTour.Api.Controllers
         /// Create a new POI
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Poi poi)
+        public async Task<IActionResult> Create([FromBody] CreatePoiDto dto)
         {
-            if (string.IsNullOrEmpty(poi.OwnerId))
+            if (string.IsNullOrEmpty(dto.OwnerId))
                 return BadRequest(new { success = false, message = "OwnerId is required" });
+
+            var poi = new Poi
+            {
+                OwnerId = dto.OwnerId,
+                Title = dto.Title,
+                Summary = dto.Summary,
+                Address = dto.Address,
+                CategoryId = dto.CategoryId,
+            };
+
+            if (dto.Location != null)
+            {
+                poi.Location = new Google.Cloud.Firestore.GeoPoint(dto.Location.Lat, dto.Location.Lng);
+            }
 
             var created = await _repo.AddAsync(poi);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, new { success = true, data = created });
@@ -167,11 +185,13 @@ namespace FoodTour.Api.Controllers
             if (existing == null)
                 return NotFound(new { success = false, message = "POI not found" });
 
+            if (existing.Summary != poi.Summary)
+            {
+                // Invalidate TTS cache since the text might have changed
+                await _ttsManager.InvalidateCacheAsync(id);
+            }
             poi.Id = id;
             var updated = await _repo.UpdateAsync(id, poi);
-
-            // Invalidate TTS cache since the text might have changed
-            await _ttsManager.InvalidateCacheAsync(id);
 
             return Ok(new { success = true, data = updated });
         }
@@ -186,11 +206,46 @@ namespace FoodTour.Api.Controllers
             if (existing == null)
                 return NotFound(new { success = false, message = "POI not found" });
 
+            if (existing.Summary != updates.GetValueOrDefault("summary")?.ToString())
+            {
+                // Invalidate TTS cache since the text might have changed
+                await _ttsManager.InvalidateCacheAsync(id);
+            }
+
+            // convert location object { lat, lng } into Firestore GeoPoint if present
+            if (updates.TryGetValue("location", out var locObj) && locObj != null)
+            {
+                try
+                {
+                    // System.Text.Json sends nested objects as JsonElement
+                    if (locObj is System.Text.Json.JsonElement je && je.ValueKind == System.Text.Json.JsonValueKind.Object)
+                    {
+                        if (je.TryGetProperty("lat", out var latProp) && je.TryGetProperty("lng", out var lngProp))
+                        {
+                            if (latProp.TryGetDouble(out var lat) && lngProp.TryGetDouble(out var lng))
+                            {
+                                updates["location"] = new Google.Cloud.Firestore.GeoPoint(lat, lng);
+                            }
+                        }
+                    }
+                    else if (locObj is Dictionary<string, object> dict)
+                    {
+                        if (dict.TryGetValue("lat", out var la) && dict.TryGetValue("lng", out var lo))
+                        {
+                            double lat = Convert.ToDouble(la);
+                            double lng = Convert.ToDouble(lo);
+                            updates["location"] = new Google.Cloud.Firestore.GeoPoint(lat, lng);
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore conversion errors, let repository handle validation
+                }
+            }
+
             await _repo.UpdateFieldsAsync(id, updates);
             var updated = await _repo.GetByIdAsync(id);
-
-            // Invalidate TTS cache since the text might have changed
-            await _ttsManager.InvalidateCacheAsync(id);
 
             return Ok(new { success = true, data = updated });
         }
@@ -218,16 +273,34 @@ namespace FoodTour.Api.Controllers
             if (existing == null)
                 return NotFound(new { success = false, message = "POI not found" });
 
+            if (file == null || file.Length == 0)
+                return BadRequest(new { success = false, message = "No file provided" });
+
             try
             {
+                // Basic server-side checks: mime & size from admin settings
+                var allowed = await _adminSettings.GetAllowedImageMimeTypesAsync();
+                var maxSize = await _adminSettings.GetMaxImageSizeAsync();
+
+                if (allowed != null && allowed.Length > 0)
+                {
+                    var contentType = file.ContentType ?? string.Empty;
+                    if (Array.IndexOf(allowed, contentType) < 0)
+                        return BadRequest(new { success = false, message = "Invalid image type" });
+                }
+
+                if (maxSize != null && file.Length > maxSize.Value)
+                {
+                    return BadRequest(new { success = false, message = $"Image too large. Max {maxSize.Value} bytes" });
+                }
+
                 var url = await _cloudinary.UploadImageAsync(file);
                 if (string.IsNullOrEmpty(url))
                     return BadRequest(new { success = false, message = "Image upload failed" });
 
-                existing.MediaUrls ??= new List<string>();
-                existing.MediaUrls.Add(url);
+                existing.MediaUrl = (url);
 
-                var updates = new Dictionary<string, object> { { "mediaUrls", existing.MediaUrls } };
+                var updates = new Dictionary<string, object> { { "mediaUrl", existing.MediaUrl } };
                 await _repo.UpdateFieldsAsync(id, updates);
 
                 return Ok(new { success = true, data = new { imageUrl = url } });

@@ -36,6 +36,11 @@ instance.interceptors.request.use((config) => {
       if (token && config.headers)
         config.headers["Authorization"] = `Bearer ${token}`;
     }
+
+    if (config?.data instanceof FormData && config.headers) {
+      delete (config.headers as Record<string, unknown>)["Content-Type"];
+      delete (config.headers as Record<string, unknown>)["content-type"];
+    }
   } catch {
     // ignore
   }
@@ -73,6 +78,29 @@ async function wrap<T = unknown>(
   }
 }
 
+function stripContentTypeForFormData(config?: AxiosRequestConfig) {
+  if (config?.headers && typeof FormData !== "undefined") {
+    const isFormData = config.data instanceof FormData || config?.data === undefined;
+    // We only know the body at call time; for our wrappers we pass body directly.
+  }
+  return config;
+}
+
+function ensureFormDataHeaders(
+  body: unknown,
+  config?: AxiosRequestConfig,
+): AxiosRequestConfig | undefined {
+  if (body instanceof FormData) {
+    const headers = { ...(config?.headers ?? {}) } as AxiosRequestConfig['headers'];
+    if (headers) {
+      delete (headers as Record<string, unknown>)["Content-Type"];
+      delete (headers as Record<string, unknown>)["content-type"];
+    }
+    return { ...(config ?? {}), headers };
+  }
+  return config;
+}
+
 export const api = {
   instance,
   get: <T = unknown>(url: string, config?: AxiosRequestConfig) =>
@@ -81,17 +109,17 @@ export const api = {
     url: string,
     body?: unknown,
     config?: AxiosRequestConfig,
-  ) => wrap<T>(instance.post(url, body, config)),
+  ) => wrap<T>(instance.post(url, body, ensureFormDataHeaders(body, config))),
   put: <T = unknown>(
     url: string,
     body?: unknown,
     config?: AxiosRequestConfig,
-  ) => wrap<T>(instance.put(url, body, config)),
+  ) => wrap<T>(instance.put(url, body, ensureFormDataHeaders(body, config))),
   patch: <T = unknown>(
     url: string,
     body?: unknown,
     config?: AxiosRequestConfig,
-  ) => wrap<T>(instance.patch(url, body, config)),
+  ) => wrap<T>(instance.patch(url, body, ensureFormDataHeaders(body, config))),
   del: <T = unknown>(url: string, config?: AxiosRequestConfig) =>
     wrap<T>(instance.delete(url, config)),
   // alias `delete` for code that uses `api.delete(...)`
@@ -135,6 +163,8 @@ export async function createPoi(body: {
   summary?: string;
   address?: string;
   ownerId?: string;
+  categoryId?: string;
+  location?: { lat: number; lng: number };
 }) {
   return wrap<unknown>(instance.post("/api/pois", body));
 }

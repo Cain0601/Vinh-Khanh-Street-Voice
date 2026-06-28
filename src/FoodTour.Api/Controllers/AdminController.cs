@@ -3,6 +3,7 @@ using FoodTour.Api.DTOs;
 using FoodTour.Api.Models;
 using FoodTour.Api.Repositories;
 using System.Text.Json;
+using FoodTour.Api.Services;
 
 namespace FoodTour.Api.Controllers
 {
@@ -20,6 +21,7 @@ namespace FoodTour.Api.Controllers
         private readonly AnalyticsRepository _analyticsRepo;
         private readonly PoiRepository _poiRepo;
         private readonly SettingsRepository _settingsRepo;
+        private readonly TtsManagerService _ttsManager;
 
         public AdminController(
             UserRepository userRepo,
@@ -28,7 +30,8 @@ namespace FoodTour.Api.Controllers
             AuditRepository auditRepo,
             AnalyticsRepository analyticsRepo,
             PoiRepository poiRepo,
-            SettingsRepository settingsRepo)
+            SettingsRepository settingsRepo,
+            TtsManagerService ttsManager)
         {
             _userRepo = userRepo;
             _categoryRepo = categoryRepo;
@@ -37,6 +40,7 @@ namespace FoodTour.Api.Controllers
             _analyticsRepo = analyticsRepo;
             _poiRepo = poiRepo;
             _settingsRepo = settingsRepo;
+            _ttsManager = ttsManager;
         }
 
         private string GetAdminId() => HttpContext.Items["UserId"]?.ToString() ?? "";
@@ -494,12 +498,24 @@ namespace FoodTour.Api.Controllers
         /// Create a new POI (admin — auto-approved)
         /// </summary>
         [HttpPost("pois")]
-        public async Task<IActionResult> CreatePoi([FromBody] Poi poi)
+        public async Task<IActionResult> CreatePoi([FromBody] AdminPoiDto dto)
         {
-            poi.Status = "approved"; // Admin-created POIs are auto-approved
-            poi.IsActive = true;
-            if (string.IsNullOrEmpty(poi.OwnerId))
-                poi.OwnerId = GetAdminId(); // Admin is the owner if not specified
+            var poi = new Poi
+            {
+                OwnerId = string.IsNullOrWhiteSpace(dto.OwnerId) ? GetAdminId() : dto.OwnerId,
+                Title = dto.Title,
+                Summary = dto.Summary,
+                Address = dto.Address,
+                CategoryId = dto.CategoryId,
+                AudioUrl = dto.AudioUrl,
+                Status = string.IsNullOrWhiteSpace(dto.Status) ? "approved" : dto.Status,
+                IsActive = dto.IsActive ?? true,
+            };
+
+            if (dto.Location != null)
+            {
+                poi.Location = new Google.Cloud.Firestore.GeoPoint(dto.Location.Lat, dto.Location.Lng);
+            }
 
             var created = await _poiRepo.AddAsync(poi);
 
@@ -520,17 +536,47 @@ namespace FoodTour.Api.Controllers
         /// Update a POI (admin)
         /// </summary>
         [HttpPut("pois/{id}")]
-        public async Task<IActionResult> UpdatePoi(string id, [FromBody] Poi poi)
+        public async Task<IActionResult> UpdatePoi(string id, [FromBody] AdminPoiDto dto)
         {
             var existing = await _poiRepo.GetByIdAsync(id);
             if (existing == null)
                 return NotFound(ApiResponse.Fail("POI not found"));
 
-            poi.Id = id;
-            // Preserve original owner if not specified
-            if (string.IsNullOrEmpty(poi.OwnerId))
-                poi.OwnerId = existing.OwnerId;
-                
+            if (existing.Summary != dto.Summary)
+            {
+                // Invalidate TTS cache since the text might have changed
+                await _ttsManager.InvalidateCacheAsync(id);
+            }
+            var poi = new Poi
+            {
+                Id = id,
+                OwnerId = string.IsNullOrWhiteSpace(dto.OwnerId) ? existing.OwnerId : dto.OwnerId,
+                Title = string.IsNullOrWhiteSpace(dto.Title) ? existing.Title : dto.Title,
+                Summary = dto.Summary ?? existing.Summary,
+                Address = dto.Address ?? existing.Address,
+                CategoryId = dto.CategoryId ?? existing.CategoryId,
+                AudioUrl = dto.AudioUrl ?? existing.AudioUrl,
+                Status = string.IsNullOrWhiteSpace(dto.Status) ? existing.Status : dto.Status,
+                IsActive = dto.IsActive ?? existing.IsActive,
+                MediaUrl = existing.MediaUrl,
+                QrCode = existing.QrCode,
+                Rating = existing.Rating,
+                ReviewCount = existing.ReviewCount,
+                Stats = existing.Stats,
+                Contact = existing.Contact,
+                Visibility = existing.Visibility,
+                CreatedAt = existing.CreatedAt,
+            };
+
+            if (dto.Location != null)
+            {
+                poi.Location = new Google.Cloud.Firestore.GeoPoint(dto.Location.Lat, dto.Location.Lng);
+            }
+            else
+            {
+                poi.Location = existing.Location;
+            }
+
             var updated = await _poiRepo.UpdateAsync(id, poi);
 
             await _auditRepo.AddAsync(new AuditLog

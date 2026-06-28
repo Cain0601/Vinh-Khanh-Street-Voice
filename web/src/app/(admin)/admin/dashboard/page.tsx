@@ -38,9 +38,9 @@ export default function AdminDashboard() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
   const [liveUsers, setLiveUsers] = useState<any[]>([]);
   const [liveStats, setLiveStats] = useState({ listens: 0, scans: 0, views: 0 });
-  const [onlineCount, setOnlineCount] = useState(0);
   const connectionRef = useRef<HubConnection | null>(null);
 
   async function load() {
@@ -86,12 +86,20 @@ export default function AdminDashboard() {
       }));
     });
 
-    conn.on("UserLocationUpdated", () => {
-      setOnlineCount((prev) => prev + 1);
+    conn.on("UserConnected", (data) => {
+      setOnlineUsers((prev) => {
+        const existing = prev.findIndex((u) => u.userId === data.userId);
+        if (existing >= 0) {
+          const next = [...prev];
+          next[existing] = data;
+          return next;
+        }
+        return [...prev, data];
+      });
     });
 
-    conn.on("UserDisconnected", () => {
-      setOnlineCount((prev) => Math.max(0, prev - 1));
+    conn.on("UserDisconnected", (userId) => {
+      setOnlineUsers((prev) => prev.filter((u) => u.userId !== userId));
     });
 
     conn.start().then(() => {
@@ -148,14 +156,6 @@ export default function AdminDashboard() {
       shadowColor: "shadow-blue-500/20",
     },
     {
-      label: "Người dùng trực tiếp",
-      value: liveUsers.length ?? "—",
-      change: "",
-      icon: Users,
-      gradient: "from-green-500 to-emerald-600",
-      shadowColor: "shadow-green-500/20",
-    },
-    {
       label: "Lượt nghe",
       value: summary?.totalListens ?? "—",
       live: liveStats.listens,
@@ -199,10 +199,10 @@ export default function AdminDashboard() {
           <p className="text-sm text-muted-foreground mt-1">Tổng quan hệ thống VinhKhanh Food Tour</p>
         </div>
         <div className="flex items-center gap-3">
-          {onlineCount > 0 && (
+          {onlineUsers.length > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {onlineCount} đang trực tuyến
+              {onlineUsers.length} đang trực tuyến
             </div>
           )}
           <button

@@ -1,4 +1,4 @@
- 'use client'
+'use client'
 
 import { useState } from 'react'
 import { useTranslation } from '@/i18n'
@@ -16,7 +16,7 @@ export default function HeroSection({ defaultQuery = 'phở ẩm thực Vĩnh Kh
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
-      router.push(`/map?search=${encodeURIComponent(query)}`)
+      router.push(`/map?search=${encodeURIComponent(query.trim())}`)
     }
   }
 

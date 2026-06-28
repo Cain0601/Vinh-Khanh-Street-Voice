@@ -64,6 +64,10 @@ function getString(value: unknown, lang: 'vi' | 'en' = 'vi'): string {
   return String(value);
 }
 
+function normalizeSearchValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -354,7 +358,9 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
   const currentNearbyIdsRef = useRef<Set<string>>(new Set());
   const watchIdRef = useRef<number | null>(null);
   const searchParams = useSearchParams();
-  const initialSearch = searchParams.get('search') || '';
+  const searchQuery = searchParams.get('search') || '';
+  const activeFilter = searchParams.get('categoryId') || 'all';
+  const selectedPoiId = searchParams.get('poiId') || '';
   const [trackingMode, setTrackingMode] = useState<'auto' | 'manual'>(() =>
     typeof navigator !== 'undefined' && navigator.geolocation ? 'auto' : 'manual',
   );
@@ -365,18 +371,66 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
   const [routeDuration, setRouteDuration] = useState<number | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
-  const [selectedPoiIdState, setSelectedPoiIdState] = useState<string>(() => searchParams.get('poiId') || '');
   const activeUserPos = userPos ?? internalUserPos;
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [showList, setShowList] = useState(!!initialSearch);
   const pois = initialPois && initialPois.length > 0 ? initialPois : fetchedPois;
 
   const selectedPoiFromList = useMemo(() => {
-    if (!selectedPoiIdState) return null;
-    return pois.find((poi) => poi.id === selectedPoiIdState) ?? null;
-  }, [pois, selectedPoiIdState]);
+    if (!selectedPoiId) return null;
+    return pois.find((poi) => poi.id === selectedPoiId) ?? null;
+  }, [pois, selectedPoiId]);
   const selectedPoi = selectedPoiFromList;
+
+  const filteredPois = useMemo(() => {
+    const searchTerm = normalizeSearchValue(searchQuery);
+
+    return pois.filter((poi) => {
+      const matchesSearch =
+        searchTerm === '' ||
+        [poi.title, poi.summary, poi.address]
+          .filter((value): value is string => typeof value === 'string')
+          .some((value) => value.toLowerCase().includes(searchTerm));
+
+      const matchesCategory = activeFilter === 'all' || poi.categoryId === activeFilter;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [pois, searchQuery, activeFilter]);
+
+  const updateMapQuery = (updates: {
+    search?: string | null;
+    categoryId?: string | null;
+    poiId?: string | null;
+  }) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (updates.search !== undefined) {
+      const nextSearch = normalizeSearchValue(updates.search ?? '');
+      if (nextSearch) {
+        params.set('search', updates.search ?? '');
+      } else {
+        params.delete('search');
+      }
+    }
+
+    if (updates.categoryId !== undefined) {
+      if (updates.categoryId && updates.categoryId !== 'all') {
+        params.set('categoryId', updates.categoryId);
+      } else {
+        params.delete('categoryId');
+      }
+    }
+
+    if (updates.poiId !== undefined) {
+      if (updates.poiId) {
+        params.set('poiId', updates.poiId);
+      } else {
+        params.delete('poiId');
+      }
+    }
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -421,7 +475,7 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
   }, []);
 
   useEffect(() => {
-    if (!selectedPoiIdState || selectedPoiFromList) return;
+    if (!selectedPoiId || selectedPoiFromList) return;
 
     let active = true;
 
@@ -430,7 +484,7 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
         const language = useUserStore.getState().language || 'vi';
         const detailedPoi = await fetchDetailedPoi(
           {
-            id: selectedPoiIdState,
+            id: selectedPoiId,
             title: '',
             summary: '',
             location: { latitude: 0, longitude: 0 },
@@ -455,12 +509,12 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
     return () => {
       active = false;
     };
-  }, [selectedPoiIdState, selectedPoiFromList]);
+  }, [selectedPoiId, selectedPoiFromList]);
 
   // Proximity-based auto trigger (GPS mode)
   useEffect(() => {
-    if (activeUserPos && pois.length > 0) {
-      const nearbyPois = pois
+    if (activeUserPos && filteredPois.length > 0) {
+      const nearbyPois = filteredPois
         .map((p) => ({
           ...p,
           distance: getDistanceFromLatLonInMeters(
@@ -489,7 +543,7 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
 
       currentNearbyIdsRef.current = newNearbyIds;
     }
-  }, [activeUserPos, pois, onTriggerAudio]);
+  }, [activeUserPos, filteredPois, onTriggerAudio]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -628,45 +682,30 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
     };
   }, [selectedPoi, activeUserPos]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowList(true);
-  };
-
-  const updatePoiQuery = (poiId: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (poiId) {
-      params.set('poiId', poiId);
-    } else {
-      params.delete('poiId');
-    }
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname);
-  };
-
   const selectRouteTarget = (poi: POI) => {
-    setSelectedPoiIdState(poi.id);
-    updatePoiQuery(poi.id);
+    updateMapQuery({ poiId: poi.id });
   };
 
   const clearRoute = () => {
-    setSelectedPoiIdState('');
     setRoutePoints([]);
     setRouteDistance(null);
     setRouteDuration(null);
     setRouteError(null);
-    updatePoiQuery(null);
+    updateMapQuery({ poiId: null });
   };
 
   return (
     <div className="h-full w-full overflow-hidden">
       <header className="absolute left-0 right-0 top-0 z-20 p-4">
-        <form onSubmit={handleSearch} className="relative">
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          className="relative"
+        >
           <input
             type="text"
             placeholder={t.map.searchPlaceholder}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => updateMapQuery({ search: e.target.value || null })}
             className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
           />
           <button
@@ -689,7 +728,10 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
           </button>
         </form>
 
-        {!showList && <MapFilters activeFilter={activeFilter} onFilterChange={setActiveFilter} />}
+        <MapFilters
+          activeFilter={activeFilter}
+          onFilterChange={(filter) => updateMapQuery({ categoryId: filter })}
+        />
 
         <div className="flex items-center justify-end pointer-events-auto">
           <button
@@ -816,7 +858,7 @@ export default function TourMap({ userPos, pois: initialPois, onTriggerAudio, on
 
         {routePoints.length >= 2 && <RouteLine route={routePoints} />}
 
-        {pois.map((poi) => {
+        {filteredPois.map((poi) => {
           const isSelected = poi.id === selectedPoi?.id;
           const markerIcon = isSelected ? SelectedPoiIcon : PoiIcon;
 

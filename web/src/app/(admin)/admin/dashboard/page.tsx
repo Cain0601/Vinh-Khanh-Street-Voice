@@ -86,33 +86,9 @@ export default function AdminDashboard() {
       }));
     });
 
-    conn.on("UserLocationUpdated", () => {
-      setOnlineCount((prev) => prev + 1);
+    conn.on("OnlineCountUpdated", (count: number) => {
+      setOnlineCount(count);
     });
-
-    conn.on("UserDisconnected", () => {
-      setOnlineCount((prev) => Math.max(0, prev - 1));
-    });
-
-    conn.start().then(() => {
-      connectionRef.current = conn;
-    }).catch(() => {});
-
-    return () => { conn.stop(); };
-  }, []);
-
-  // SignalR for live user count
-  useEffect(() => {
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("ft_token="))
-      ?.split("=")[1];
-    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5190") + "/hubs/location";
-    const conn = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => token || "" })
-      .configureLogging(LogLevel.Information)
-      .withAutomaticReconnect()
-      .build();
 
     conn.on("UserLocationUpdated", (data) => {
       setLiveUsers((prev) => {
@@ -131,8 +107,11 @@ export default function AdminDashboard() {
     });
 
     conn.start()
-      .then(() => console.log("Connected to LocationHub (Dashboard)"))
-      .catch(err => console.error("SignalR connection error:", err));
+      .then(() => {
+        connectionRef.current = conn;
+        conn.invoke("GetOnlineCount").then((c: number) => setOnlineCount(c)).catch(() => {});
+      })
+      .catch((err) => console.error("SignalR connection error:", err));
 
     return () => {
       conn.stop();
@@ -148,9 +127,10 @@ export default function AdminDashboard() {
       shadowColor: "shadow-blue-500/20",
     },
     {
-      label: "Người dùng trực tiếp",
-      value: liveUsers.length ?? "—",
-      change: "",
+      label: "Người dùng trực tuyến",
+      value: onlineCount,
+      live: null,
+      sublabel: onlineCount > 0 ? "đang online" : "không có ai",
       icon: Users,
       gradient: "from-green-500 to-emerald-600",
       shadowColor: "shadow-green-500/20",
@@ -199,12 +179,6 @@ export default function AdminDashboard() {
           <p className="text-sm text-muted-foreground mt-1">Tổng quan hệ thống VinhKhanh Food Tour</p>
         </div>
         <div className="flex items-center gap-3">
-          {onlineCount > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {onlineCount} đang trực tuyến
-            </div>
-          )}
           <button
             onClick={load}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground border border-white/[0.06] hover:bg-white/[0.04] hover:text-foreground transition-colors"
@@ -226,7 +200,15 @@ export default function AdminDashboard() {
                 <p className="text-3xl font-bold text-foreground mt-1 tracking-tight">
                   {typeof card.value === "number" ? card.value.toLocaleString() : card.value}
                 </p>
-                {card.live !== null && (
+                {"sublabel" in card ? (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <span className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      (card.value as number) > 0 ? "bg-emerald-400 animate-pulse" : "bg-white/20"
+                    )} />
+                    <span className="text-xs text-muted-foreground">{card.sublabel}</span>
+                  </div>
+                ) : card.live !== null && (
                   <div className="flex items-center gap-1 mt-2 text-xs font-medium text-emerald-400">
                     <ArrowUpRight size={14} />
                     +{card.live} phiên này

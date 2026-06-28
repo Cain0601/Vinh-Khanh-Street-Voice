@@ -33,7 +33,6 @@ export type LiveUser = {
 export default function AdminHeatmapPage() {
   const [points, setPoints] = useState<HeatPoint[]>([]);
   const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
-  const [onlineCount, setOnlineCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const connectionRef = useRef<HubConnection | null>(null);
 
@@ -60,11 +59,11 @@ export default function AdminHeatmapPage() {
 
     conn.on("UserLocationUpdated", (data: LiveUser) => {
       setLiveUsers((prev) => {
-        const idx = prev.findIndex(u => u.userId === data.userId);
-        if (idx >= 0) {
-          const newArr = [...prev];
-          newArr[idx] = data;
-          return newArr;
+        const existing = prev.findIndex(u => u.userId === data.userId);
+        if (existing >= 0) {
+          const newUsers = [...prev];
+          newUsers[existing] = data;
+          return newUsers;
         }
         return [...prev, data];
       });
@@ -72,10 +71,6 @@ export default function AdminHeatmapPage() {
 
     conn.on("UserDisconnected", (userId: string) => {
       setLiveUsers((prev) => prev.filter(u => u.userId !== userId));
-    });
-
-    conn.on("OnlineCountUpdated", (count: number) => {
-      setOnlineCount(count);
     });
 
     conn.on("PoiStatsUpdated", (poiId: string, eventType: string) => {
@@ -98,7 +93,6 @@ export default function AdminHeatmapPage() {
     conn.start().then(() => {
       console.log("Connected to LocationHub as Admin");
       connectionRef.current = conn;
-      conn.invoke("GetOnlineCount").then(count => setOnlineCount(count)).catch(() => {});
     }).catch(err => console.error("SignalR Connection Error: ", err));
 
     return () => {
@@ -121,10 +115,10 @@ export default function AdminHeatmapPage() {
             Mức độ tương tác (lượt xem + nghe + quét QR) theo từng địa điểm
           </p>
         </div>
-        {onlineCount > 0 && (
+        {liveUsers.length > 0 && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            {onlineCount} đang trực tuyến
+            {liveUsers.length} đang trực tuyến
           </div>
         )}
       </div>

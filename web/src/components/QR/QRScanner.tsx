@@ -62,7 +62,7 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
       
       setTimeout(() => {
         onClose();
-        router.push(`/pois/${poiId}`);
+        router.push(`/pois/${poiId}?src=app`);
       }, 800);
     } else {
       setError('Mã QR không hợp lệ');
@@ -87,7 +87,7 @@ export default function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
       try {
         await html5QrCode.start(
           { facingMode: 'environment' },
-          { fps: 12, qrbox: { width: 280, height: 280 } },
+          { fps: 12, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
           handleScanSuccess,
           () => {} // error callback
         )

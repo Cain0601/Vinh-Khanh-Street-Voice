@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Header from '@/components/Layout/Header'
 import PoiDetail from '@/components/Poi/PoiDetail'
 import { useRouter, useParams } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
-import { getPoi, getBookmarks, toggleBookmark } from '@/lib/api'
+import api, { getPoi, getBookmarks, toggleBookmark } from '@/lib/api'
 import { useUserStore } from "@/store/userStore";
 // Minimal POI type matching the backend response used in this page
 interface Poi {
@@ -38,7 +38,9 @@ export default function PoiDetailPage() {
 
   const searchParams = useSearchParams()
   const lang = searchParams?.get('lang') ?? language
-  const isQr = searchParams?.get('qr') === '1'
+  const src = searchParams?.get('src')
+  const isQr = src === 'qr' || src === 'app' || searchParams?.get('qr') === '1'
+  const hasLoggedQr = useRef(false)
 
   // Fetch POI data
   useEffect(() => {
@@ -50,13 +52,24 @@ export default function PoiDetailPage() {
         console.log('Fetched POI:', poiData)
         setPoi(poiData)
         setError(null)
+        
+        // Ghi nhận lượt quét QR nếu truy cập qua QR (tránh ghi đúp ở Strict Mode bằng useRef)
+        if (isQr && !hasLoggedQr.current) {
+          hasLoggedQr.current = true
+          api.post('/analytics/qr-scan', { 
+            poiId: poiData.id,
+            source: src === 'app' ? 'app' : 'external'
+          }).catch(err => {
+            console.error('Failed to log QR scan', err)
+          })
+        }
       } else {
         setError(res.message ?? 'Failed to load POI')
       }
       setLoading(false)
     }
     fetchPoi()
-  }, [params.id, lang])
+  }, [params.id, lang, isQr])
 
   // Load bookmarks on mount
   useEffect(() => {

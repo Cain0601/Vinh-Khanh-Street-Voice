@@ -143,7 +143,8 @@ namespace FoodTour.Api.Controllers
             {
                 Type = "QR_SCAN",
                 PoiId = request.PoiId,
-                UserId = GetUserId()
+                UserId = GetUserId(),
+                Metadata = new Dictionary<string, object> { { "source", request.Source ?? "external" } }
             });
 
             await _hubContext.Clients.Group("Admins").SendAsync("PoiStatsUpdated", request.PoiId, "QR_SCAN");
@@ -174,5 +175,6 @@ namespace FoodTour.Api.Controllers
     public class AnalyticsEventRequest
     {
         public string PoiId { get; set; } = string.Empty;
+        public string? Source { get; set; }
     }
 }

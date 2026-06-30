@@ -11,15 +11,18 @@ namespace FoodTour.Api.Controllers
         private readonly PoiRepository _poiRepo;
         private readonly MenuItemRepository _menuRepo;
         private readonly UserRepository _userRepo;
+        private readonly AnalyticsRepository _analyticsRepo;
 
         public OwnerController(
             PoiRepository poiRepo,
             MenuItemRepository menuRepo,
-            UserRepository userRepo)
+            UserRepository userRepo,
+            AnalyticsRepository analyticsRepo)
         {
             _poiRepo  = poiRepo;
             _menuRepo = menuRepo;
             _userRepo = userRepo;
+            _analyticsRepo = analyticsRepo;
         }
 
         // ── NEW: GET /owners/dashboard ────────────────────────────────────────────
@@ -32,6 +35,10 @@ namespace FoodTour.Api.Controllers
 
             var pois       = await _poiRepo.GetByOwnerAsync(userId);
             var activePois = pois.Where(p => p.IsActive).ToList();
+
+            var ownerPoiIds = new HashSet<string>(pois.Where(p => !string.IsNullOrEmpty(p.Id)).Select(p => p.Id));
+            var allQrEvents = await _analyticsRepo.GetByTypeAsync("QR_SCAN");
+            var totalScans = allQrEvents.Count(e => !string.IsNullOrEmpty(e.PoiId) && ownerPoiIds.Contains(e.PoiId));
 
             var menuItemCount = 0;
             double totalRating = 0; int ratingCount = 0;
@@ -63,6 +70,7 @@ namespace FoodTour.Api.Controllers
                         totalPois      = pois.Count,
                         activePois     = activePois.Count,
                         totalMenuItems = menuItemCount,
+                        totalScans,
                         avgRating,
                         activeRate
                     },
@@ -81,6 +89,10 @@ namespace FoodTour.Api.Controllers
 
             var pois       = await _poiRepo.GetByOwnerAsync(userId);
             var activePois = pois.Where(p => p.IsActive).ToList();
+
+            var ownerPoiIds = new HashSet<string>(pois.Where(p => !string.IsNullOrEmpty(p.Id)).Select(p => p.Id));
+            var allQrEvents = await _analyticsRepo.GetByTypeAsync("QR_SCAN");
+            var totalScans = allQrEvents.Count(e => !string.IsNullOrEmpty(e.PoiId) && ownerPoiIds.Contains(e.PoiId));
 
             var menuItemCount = 0;
             double totalRating = 0; int ratingCount = 0;
@@ -113,7 +125,7 @@ namespace FoodTour.Api.Controllers
                     stats = new
                     {
                         totalPois = pois.Count, activePois = activePois.Count,
-                        totalMenuItems = menuItemCount, avgRating, activeRate
+                        totalMenuItems = menuItemCount, totalScans, avgRating, activeRate
                     },
                     chartData,
                     distribution

@@ -23,6 +23,18 @@ namespace FoodTour.Api.Models
         [FirestoreProperty("reason")]
         public string? Reason { get; set; }
 
+        [FirestoreProperty("ownerFullName")]
+        public string? OwnerFullName { get; set; }
+
+        [FirestoreProperty("ownerPhoneNumber")]
+        public string? OwnerPhoneNumber { get; set; }
+
+        [FirestoreProperty("ownerAvatar")]
+        public string? OwnerAvatar { get; set; }
+
+        [FirestoreProperty("ownerBrandName")]
+        public string? OwnerBrandName { get; set; }
+
         [FirestoreProperty("createdAt")]
         public Timestamp CreatedAt { get; set; }
 

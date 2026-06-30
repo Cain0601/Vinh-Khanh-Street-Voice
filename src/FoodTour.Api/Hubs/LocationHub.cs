@@ -31,6 +31,11 @@ namespace FoodTour.Api.Hubs
                 _logger.LogInformation($"User connected to LocationHub: {Context.ConnectionId}");
             }
 
+            if (!string.IsNullOrWhiteSpace(userId) && userRole != "GUEST")
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"Users:{userId}");
+            }
+
             await Clients.Group("Admins").SendAsync("UserConnected", new
             {
                 userId = userId,

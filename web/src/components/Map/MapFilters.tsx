@@ -21,7 +21,7 @@ type Category = {
 
 function getCategoryLabel(category: Category) {
   if (typeof category.name === 'string') return category.name
-  return category.name?.vi || category.name?.en || category.title || category.slug || category.id
+  return category.name?.en || category.name?.vi || category.title || category.slug || category.id
 }
 
 export default function MapFilters({ activeFilter, onFilterChange }: MapFiltersProps) {
@@ -53,7 +53,7 @@ export default function MapFilters({ activeFilter, onFilterChange }: MapFiltersP
   const visibleFilters = useMemo(
     () =>
       [
-        { id: 'all', label: 'Tất cả', icon: '📍' },
+        { id: 'all', label: 'All', icon: '📍' },
         ...filters
           .filter((filter) => filter.active !== false)
           .slice()

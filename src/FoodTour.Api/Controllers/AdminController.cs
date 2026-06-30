@@ -4,6 +4,8 @@ using FoodTour.Api.Models;
 using FoodTour.Api.Repositories;
 using System.Text.Json;
 using FoodTour.Api.Services;
+using FoodTour.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace FoodTour.Api.Controllers
 {
@@ -22,6 +24,7 @@ namespace FoodTour.Api.Controllers
         private readonly PoiRepository _poiRepo;
         private readonly SettingsRepository _settingsRepo;
         private readonly TtsManagerService _ttsManager;
+        private readonly IHubContext<LocationHub> _hubContext;
 
         public AdminController(
             UserRepository userRepo,
@@ -31,7 +34,8 @@ namespace FoodTour.Api.Controllers
             AnalyticsRepository analyticsRepo,
             PoiRepository poiRepo,
             SettingsRepository settingsRepo,
-            TtsManagerService ttsManager)
+            TtsManagerService ttsManager,
+            IHubContext<LocationHub> hubContext)
         {
             _userRepo = userRepo;
             _categoryRepo = categoryRepo;
@@ -41,6 +45,7 @@ namespace FoodTour.Api.Controllers
             _poiRepo = poiRepo;
             _settingsRepo = settingsRepo;
             _ttsManager = ttsManager;
+            _hubContext = hubContext;
         }
 
         private string GetAdminId() => HttpContext.Items["UserId"]?.ToString() ?? "";
@@ -187,7 +192,13 @@ namespace FoodTour.Api.Controllers
             if (request == null)
                 return NotFound(ApiResponse.Fail("Moderation request not found"));
 
-            return Ok(ApiResponse.Ok(request));
+            var requestedByUser = await _userRepo.GetByIdAsync(request.RequestedBy);
+
+            return Ok(ApiResponse.Ok(new
+            {
+                request,
+                requestedByUser
+            }));
         }
 
         /// <summary>
@@ -229,6 +240,22 @@ namespace FoodTour.Api.Controllers
                 }
             }
 
+            await _hubContext.Clients.Group($"Users:{request.RequestedBy}").SendAsync("ModerationRequestStatusChanged", new
+            {
+                requestId = id,
+                type = request.Type,
+                status = "APPROVED",
+                title = request.Type == "UPGRADE_OWNER"
+                    ? "Yêu cầu đăng ký owner đã được duyệt"
+                    : "Yêu cầu đã được duyệt",
+                message = request.Type == "UPGRADE_OWNER"
+                    ? "Admin đã duyệt yêu cầu đăng ký làm owner của bạn."
+                    : "Admin đã duyệt yêu cầu của bạn.",
+                reason = (string?)null,
+                createdAt = request.CreatedAt,
+                updatedAt = DateTime.UtcNow
+            });
+
             await _auditRepo.AddAsync(new AuditLog
             {
                 AdminId = GetAdminId(),
@@ -269,6 +296,22 @@ namespace FoodTour.Api.Controllers
                     });
                 }
             }
+
+            await _hubContext.Clients.Group($"Users:{request.RequestedBy}").SendAsync("ModerationRequestStatusChanged", new
+            {
+                requestId = id,
+                type = request.Type,
+                status = "REJECTED",
+                title = request.Type == "UPGRADE_OWNER"
+                    ? "Yêu cầu đăng ký owner đã bị từ chối"
+                    : "Yêu cầu đã bị từ chối",
+                message = request.Type == "UPGRADE_OWNER"
+                    ? "Admin đã từ chối yêu cầu đăng ký làm owner của bạn."
+                    : "Admin đã từ chối yêu cầu của bạn.",
+                reason = body?.Reason,
+                createdAt = request.CreatedAt,
+                updatedAt = DateTime.UtcNow
+            });
 
             await _auditRepo.AddAsync(new AuditLog
             {

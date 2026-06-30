@@ -8,6 +8,9 @@ type User = {
   role?: string
   language?: string
   isOnboarded?: boolean
+  phoneNumber?: string | null
+  avatar?: string | null
+  brandName?: string | null
 }
 
 type UserState = {

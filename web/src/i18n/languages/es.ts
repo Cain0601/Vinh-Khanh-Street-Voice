@@ -78,6 +78,24 @@ const es = {
     placeholderConfirmPassword: "Reingresa la nueva contraseña",
     saveInfo: "Guardar información",
     changePassword: "Cambiar contraseña",
+    ownerRegister: {
+      title: "Convertirse en propietario de restaurante",
+      subtitle: "Enviar solicitud para actualizar cuenta",
+      
+      fullNamePlaceholder: "Nombre completo",
+      phoneNumber: "Número de teléfono",
+      phonePlaceholder: "+84...",
+      brandName: "Nombre de la marca/restaurante",
+      brandPlaceholder: "Ejemplo: Phượng Street Food",
+      
+      info: "El administrador revisará esta solicitud antes de otorgar privilegios de propietario. Puedes completar información adicional de propietario más tarde en el portal de propietarios.",
+      
+      button: {
+        submit: "Enviar solicitud",
+        sending: "Enviando...",
+        pending: "Pendiente de aprobación"
+      }
+    }
   },
   poiDetail: {
     intro: "Introducción",
@@ -134,6 +152,20 @@ const es = {
     gpsPrompt: "Please grant location permission for the best experience.",
     selectLanguage: "Select Language",
     continue: "Continue",
+  },
+  notifications: {
+    title: "Tus notificaciones",
+    markAllRead: "Marcar todas como leídas",
+    unreadCount: "Tienes {count} notificaciones sin leer",
+    allRead: "Todas las notificaciones han sido leídas",
+    reasonPrefix: "Motivo de rechazo:",
+    approved: {
+      goToManagement: "Ir a la gestión inmediatamente"
+    },
+    empty: {
+      title: "No hay notificaciones",
+      description: "Recibirás notificaciones cuando el administrador apruebe o rechace tu solicitud"
+    }
   },
 };
 export default es;

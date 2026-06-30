@@ -78,6 +78,24 @@ const id = {
     placeholderConfirmPassword: "Masukkan kembali kata sandi baru",
     saveInfo: "Simpan Informasi",
     changePassword: "Ubah Kata Sandi",
+    ownerRegister: {
+      title: "Menjadi Pemilik Restoran",
+      subtitle: "Kirim permintaan upgrade akun",
+
+      fullNamePlaceholder: "Nama Lengkap",
+      phoneNumber: "Nomor Telepon",
+      phonePlaceholder: "+84...",
+      brandName: "Nama Merek",
+      brandPlaceholder: "Contoh: Phượng Street Food",
+
+      info: "Admin akan meninjau permintaan ini sebelum memberikan hak pemilik. Anda dapat melengkapi informasi pemilik tambahan nanti di portal pemilik.",
+
+      button: {
+        submit: "Kirim Permintaan",
+        sending: "Mengirim...",
+        pending: "Menunggu Persetujuan"
+      }
+    }
   },
   poiDetail: {
     intro: "Pengantar",
@@ -135,5 +153,19 @@ const id = {
     selectLanguage: "Select Language",
     continue: "Continue",
   },
+  notifications: {
+    title: "Notifikasi",
+    markAllRead: "Tandai Semua Sudah Dibaca",
+    unreadCount: "Anda memiliki {count} notifikasi yang belum dibaca",
+    allRead: "Semua notifikasi telah dibaca",
+    reasonPrefix: "Alasan penolakan:",
+    approved: {
+      goToManagement: "Pergi ke Manajemen segera"
+    },
+    empty: {
+      title: "Tidak ada notifikasi",
+      description: "Anda akan menerima notifikasi ketika admin menyetujui atau menolak permintaan Anda"
+    }
+  }
 };
 export default id;

@@ -78,6 +78,24 @@ const zh = {
     placeholderConfirmPassword: "重新输入新密码",
     saveInfo: "保存信息",
     changePassword: "修改密码",
+    ownerRegister: {
+      title: "成为餐厅业主",
+      subtitle: "提交账号升级申请",
+      
+      fullNamePlaceholder: "代表姓名",
+      phoneNumber: "电话号码",
+      phonePlaceholder: "+84...",
+      brandName: "品牌名称/餐厅",
+      brandPlaceholder: "例如: Phượng Street Food",
+      
+      info: "管理员将在授予业主权限前审核此申请。您可以在业主门户中稍后完善业主详细信息。",
+      
+      button: {
+        submit: "提交申请",
+        sending: "发送中...",
+        pending: "等待审批"
+      }
+    }
   },
   poiDetail: {
     intro: "简介",
@@ -113,27 +131,41 @@ const zh = {
     closeButton: "关闭",
   },
   auth: {
-    loginTitle: "Login",
-    registerTitle: "Register",
-    displayNamePlaceholder: "Display Name",
-    emailPlaceholder: "Email",
-    passwordPlaceholder: "Password",
-    loginButton: "Login",
-    registerButton: "Register",
-    or: "Or",
-    googleSignIn: "Continue with Google",
-    noAccount: "No account? Register",
-    haveAccount: "Have an account? Login",
-    loginSuccess: "Login successful",
-    registerSuccess: "Registration successful",
-    displayNameRequired: "Please enter a display name",
-    genericError: "An error occurred, please try again",
+    loginTitle: "登录",
+    registerTitle: "注册",
+    displayNamePlaceholder: "显示名称",
+    emailPlaceholder: "邮箱",
+    passwordPlaceholder: "密码",
+    loginButton: "登录",
+    registerButton: "注册",
+    or: "或",
+    googleSignIn: "使用 Google 继续",
+    noAccount: "没有账号？注册",
+    haveAccount: "已有账号？登录",
+    loginSuccess: "登录成功",
+    registerSuccess: "注册成功",
+    displayNameRequired: "请输入显示名称",
+    genericError: "发生错误，请重试",
   },
   onboarding: {
-    title: "Welcome",
-    gpsPrompt: "Please grant location permission for the best experience.",
-    selectLanguage: "Select Language",
-    continue: "Continue",
+    title: "欢迎",
+    gpsPrompt: "请授予位置权限以获得最佳体验。",
+    selectLanguage: "选择语言",
+    continue: "继续",
+  },
+  notifications: {
+    title: "通知",
+    markAllRead: "全部标记为已读",
+    unreadCount: "您有 {count} 条未读通知",
+    allRead: "所有通知均已阅读",
+    reasonPrefix: "拒绝原因：",
+    approved: {
+      goToManagement: "立即前往管理页面"
+    },
+    empty: {
+      title: "暂无通知",
+      description: "当管理员批准或拒绝您的请求时，您将收到通知"
+    }
   },
 };
 export default zh;

@@ -78,6 +78,24 @@ const ko = {
     placeholderConfirmPassword: "새 비밀번호 재입력",
     saveInfo: "정보 저장",
     changePassword: "비밀번호 변경",
+    ownerRegister: {
+      title: "식당 주인 되기",
+      subtitle: "관리자에게 계정 업그레이드 요청 제출",
+      
+      fullNamePlaceholder: "대표자 이름",
+      phoneNumber: "전화번호",
+      phonePlaceholder: "+84...",
+      brandName: "브랜드/식당 이름",
+      brandPlaceholder: "예: Phượng Street Food",
+      
+      info: "관리자가 이 요청을 검토한 후 식당 주인 권한을 부여합니다. 추가 식당 주인 정보를 나중에 식당 주인 포털에서 완료할 수 있습니다.",
+      
+      button: {
+        submit: "요청 제출",
+        sending: "전송 중...",
+        pending: "승인 대기 중"
+      }
+    }
   },
   poiDetail: {
     intro: "소개",
@@ -111,29 +129,42 @@ const ko = {
     noQrFound: "QR 코드를 찾을 수 없습니다. 다시 시도해주세요.",
     chooseFromGallery: "갤러리에서 선택",
     closeButton: "닫기",
-  },
-  auth: {
-    loginTitle: "Login",
-    registerTitle: "Register",
-    displayNamePlaceholder: "Display Name",
-    emailPlaceholder: "Email",
-    passwordPlaceholder: "Password",
-    loginButton: "Login",
-    registerButton: "Register",
-    or: "Or",
-    googleSignIn: "Continue with Google",
-    noAccount: "No account? Register",
-    haveAccount: "Have an account? Login",
-    loginSuccess: "Login successful",
-    registerSuccess: "Registration successful",
-    displayNameRequired: "Please enter a display name",
-    genericError: "An error occurred, please try again",
+  },auth: {
+    loginTitle: "로그인",
+    registerTitle: "회원가입",
+    displayNamePlaceholder: "표시 이름",
+    emailPlaceholder: "이메일",
+    passwordPlaceholder: "비밀번호",
+    loginButton: "로그인",
+    registerButton: "회원가입",
+    or: "또는",
+    googleSignIn: "Google로 계속하기",
+    noAccount: "계정이 없으신가요? 회원가입",
+    haveAccount: "이미 계정이 있으신가요? 로그인",
+    loginSuccess: "로그인 성공",
+    registerSuccess: "회원가입 성공",
+    displayNameRequired: "표시 이름을 입력해주세요",
+    genericError: "오류가 발생했습니다. 다시 시도해주세요",
   },
   onboarding: {
-    title: "Welcome",
-    gpsPrompt: "Please grant location permission for the best experience.",
-    selectLanguage: "Select Language",
-    continue: "Continue",
+    title: "환영합니다",
+    gpsPrompt: "최상의 경험을 위해 위치 권한을 허용해주세요.",
+    selectLanguage: "언어 선택",
+    continue: "계속하기",
+  },
+  notifications: {
+    title: "알림",
+    markAllRead: "모두 읽음으로 표시",
+    unreadCount: "{count}개의 읽지 않은 알림이 있습니다",
+    allRead: "모든 알림을 읽었습니다",
+    reasonPrefix: "거절 사유:",
+    approved: {
+      goToManagement: "관리 페이지로 바로 이동"
+    },
+    empty: {
+      title: "알림 없음",
+      description: "관리자가 요청을 승인하거나 거절할 때 알림을 받게 됩니다"
+    }
   },
 };
 export default ko;

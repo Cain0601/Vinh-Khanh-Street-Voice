@@ -78,6 +78,24 @@ const vi = {
     placeholderConfirmPassword: "Nhập lại mật khẩu mới",
     saveInfo: "Lưu thông tin",
     changePassword: "Đổi mật khẩu",
+    ownerRegister: {
+      title: "Đăng ký làm owner",
+      subtitle: "Gửi hồ sơ cho admin duyệt quyền owner",
+      
+      fullNamePlaceholder: "Tên người đại diện",
+      phoneNumber: "Số điện thoại",
+      phonePlaceholder: "+84...",
+      brandName: "Tên thương hiệu/quán",
+      brandPlaceholder: "Ví dụ: Phượng Street Food",
+      
+      info: "Admin sẽ xem hồ sơ này trước khi cấp quyền owner. Bạn có thể hoàn thiện các thông tin owner chi tiết hơn sau trong owner portal.",
+      
+      button: {
+        submit: "Gửi yêu cầu",
+        sending: "Đang gửi...",
+        pending: "Đang chờ duyệt"
+      }
+    }
   },
   poiDetail: {
     intro: "Giới thiệu",
@@ -133,6 +151,20 @@ const vi = {
     gpsPrompt: "Vui lòng cấp quyền vị trí để trải nghiệm tốt nhất.",
     selectLanguage: "Chọn ngôn ngữ",
     continue: "Tiếp tục",
+  },
+  notifications: {
+    title: "Thông báo của bạn",
+    markAllRead: "Đánh dấu đã đọc",
+    unreadCount: "Bạn có {count} thông báo chưa đọc",
+    allRead: "Mọi thông báo đã được đọc",
+    reasonPrefix: "Lý do từ chối:",
+    approved: {
+      goToManagement: "Đi đến Quản lý ngay"
+    },
+    empty: {
+      title: "Chưa có thông báo",
+      description: "Bạn sẽ nhận được thông báo khi admin duyệt hoặc từ chối yêu cầu của bạn"
+    }
   },
 };
 export default vi;

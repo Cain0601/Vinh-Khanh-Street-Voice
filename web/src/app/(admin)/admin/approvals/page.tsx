@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr'
-import { getModerationRequests, approveModerationRequest, rejectModerationRequest } from '@/lib/adminApi'
+import { getModerationRequests, getModerationRequest, approveModerationRequest, rejectModerationRequest } from '@/lib/adminApi'
 import { cn } from '@/lib/cn'
 import {
   ShieldCheck, Check, X, Clock, Users, MapPin,
-  RefreshCw, MessageSquare, ChevronDown
+  RefreshCw, MessageSquare, Eye, Store, User
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 type ModerationRequest = {
   id: string
@@ -16,8 +17,25 @@ type ModerationRequest = {
   requestedBy: string
   status: string
   reason?: string
-  createdAt?: any
-  updatedAt?: any
+  ownerFullName?: string | null
+  ownerPhoneNumber?: string | null
+  ownerAvatar?: string | null
+  ownerBrandName?: string | null
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+type ModerationDetailResponse = {
+  request: ModerationRequest
+  requestedByUser?: {
+    id: string
+    email?: string
+    fullName?: string
+    role?: string
+    avatar?: string | null
+    phoneNumber?: string | null
+    brandName?: string | null
+  } | null
 }
 
 export default function AdminApprovalsPage() {
@@ -27,6 +45,9 @@ export default function AdminApprovalsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [rejectModal, setRejectModal] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [detailModal, setDetailModal] = useState(false)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [selectedDetail, setSelectedDetail] = useState<ModerationDetailResponse | null>(null)
 
   const connectionRef = useRef<HubConnection | null>(null);
 
@@ -38,7 +59,15 @@ export default function AdminApprovalsPage() {
   }
 
   useEffect(() => { 
-    load() 
+    let cancelled = false
+
+    void (async () => {
+      setLoading(true)
+      const res = await getModerationRequests(statusFilter === 'ALL' ? undefined : statusFilter)
+      if (cancelled) return
+      if (res.success) setRequests(res.data?.items || [])
+      setLoading(false)
+    })()
 
     // Setup SignalR for real-time requests
     const token = document.cookie
@@ -55,14 +84,17 @@ export default function AdminApprovalsPage() {
 
     conn.on("NewModerationRequest", () => {
       // Refresh the list when a new request arrives
-      load();
+      void (async () => {
+        const res = await getModerationRequests(statusFilter === 'ALL' ? undefined : statusFilter)
+        if (res.success) setRequests(res.data?.items || [])
+      })()
     });
 
     conn.start().then(() => {
       connectionRef.current = conn;
     }).catch(() => {});
 
-    return () => { conn.stop(); };
+    return () => { cancelled = true; conn.stop(); };
   }, [statusFilter])
 
   async function handleApprove(id: string) {
@@ -83,7 +115,19 @@ export default function AdminApprovalsPage() {
     setActionLoading(null)
   }
 
-  const typeConfig: Record<string, { label: string; icon: any; color: string }> = {
+  async function handleViewDetail(id: string) {
+    setDetailModal(true)
+    setDetailLoading(true)
+    setSelectedDetail(null)
+
+    const res = await getModerationRequest(id)
+    if (res.success) {
+      setSelectedDetail(res.data as ModerationDetailResponse)
+    }
+    setDetailLoading(false)
+  }
+
+  const typeConfig: Record<string, { label: string; icon: LucideIcon; color: string }> = {
     POI_CREATE: { label: 'Tạo địa điểm', icon: MapPin, color: 'text-blue-400 bg-blue-500/10' },
     POI_UPDATE: { label: 'Cập nhật địa điểm', icon: RefreshCw, color: 'text-teal-400 bg-teal-500/10' },
     UPGRADE_OWNER: { label: 'Nâng cấp Owner', icon: Users, color: 'text-purple-400 bg-purple-500/10' },
@@ -192,8 +236,16 @@ export default function AdminApprovalsPage() {
                   </div>
 
                   {/* Actions */}
-                  {isPending && (
-                    <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleViewDetail(req.id)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/[0.04] text-foreground border border-white/[0.06] text-xs font-medium hover:bg-white/[0.06] transition-colors"
+                    >
+                      <Eye size={14} />
+                      Chi tiết
+                    </button>
+                    {isPending && (
+                      <>
                       <button
                         onClick={() => handleApprove(req.id)}
                         disabled={actionLoading === req.id}
@@ -210,8 +262,9 @@ export default function AdminApprovalsPage() {
                         <X size={14} />
                         Từ chối
                       </button>
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )
@@ -251,6 +304,132 @@ export default function AdminApprovalsPage() {
               >
                 Xác nhận từ chối
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {detailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDetailModal(false)} />
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-[#131b2e] border border-white/[0.08] rounded-2xl shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Chi tiết yêu cầu owner</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Xem thông tin người gửi và hồ sơ đã nộp
+                </p>
+              </div>
+              <button
+                onClick={() => setDetailModal(false)}
+                className="p-1.5 rounded-lg hover:bg-white/[0.06] text-muted-foreground"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : selectedDetail ? (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
+                        <User size={14} className="text-emerald-400" />
+                        Người gửi
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <p className="text-muted-foreground">
+                          Tên: <span className="text-foreground">{selectedDetail.requestedByUser?.fullName || selectedDetail.requestedByUser?.email || selectedDetail.request.requestedBy}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          Email: <span className="text-foreground">{selectedDetail.requestedByUser?.email || "—"}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          Role: <span className="text-foreground">{selectedDetail.requestedByUser?.role || "USER"}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
+                        <Clock size={14} className="text-amber-400" />
+                        Trạng thái
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <p className="text-muted-foreground">
+                          Status: <span className="text-foreground">{selectedDetail.request.status}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          Type: <span className="text-foreground">{selectedDetail.request.type}</span>
+                        </p>
+                        <p className="text-muted-foreground">
+                          Target: <span className="font-mono text-foreground">{selectedDetail.request.targetId}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
+                      <Store size={14} className="text-purple-400" />
+                      Hồ sơ owner đã gửi
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Họ và tên</p>
+                        <p className="text-sm text-foreground">{selectedDetail.request.ownerFullName || "—"}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Số điện thoại</p>
+                        <p className="text-sm text-foreground">{selectedDetail.request.ownerPhoneNumber || "—"}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Brand name</p>
+                        <p className="text-sm text-foreground">{selectedDetail.request.ownerBrandName || "—"}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Avatar URL</p>
+                        <p className="text-sm text-foreground break-all">{selectedDetail.request.ownerAvatar || "—"}</p>
+                      </div>
+                    </div>
+
+                    {selectedDetail.request.ownerAvatar ? (
+                      <div className="mt-4 flex items-center gap-3">
+                        <img
+                          src={selectedDetail.request.ownerAvatar}
+                          alt="Owner avatar"
+                          className="h-16 w-16 rounded-2xl object-cover border border-white/[0.08]"
+                        />
+                        <div className="text-sm text-muted-foreground">
+                          <p className="font-medium text-foreground">
+                            {selectedDetail.request.ownerBrandName || selectedDetail.request.ownerFullName || "Avatar preview"}
+                          </p>
+                          <p>Preview ảnh đại diện</p>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {selectedDetail.request.reason ? (
+                    <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2">
+                        <MessageSquare size={14} className="text-blue-400" />
+                        Ghi chú
+                      </div>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedDetail.request.reason}</p>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div className="py-12 text-center text-sm text-muted-foreground">
+                  Không tải được chi tiết yêu cầu.
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -78,6 +78,24 @@ const en = {
     placeholderConfirmPassword: "Re-enter new password",
     saveInfo: "Save information",
     changePassword: "Change password",
+    ownerRegister: {
+      title: "Become an owner",
+      subtitle: "Send your application to the admin for owner privileges",
+      
+      fullNamePlaceholder: "Full Name",
+      phoneNumber: "Phone Number",
+      phonePlaceholder: "+84...",
+      brandName: "Brand Name",
+      brandPlaceholder: "e.g., Phượng Street Food",
+      
+      info: "Admin will review this application before granting owner privileges. You can complete additional owner information later in the owner portal.",
+      
+      button: {
+        submit: "Submit Request",
+        sending: "Sending...",
+        pending: "Pending Approval",
+      }
+    }
   },
   poiDetail: {
     intro: "Introduction",
@@ -133,6 +151,20 @@ const en = {
     gpsPrompt: "Please grant location permission for the best experience.",
     selectLanguage: "Select Language",
     continue: "Continue",
+  },
+  notifications: {
+    title: "Your Notifications",
+    markAllRead: "Mark all as read",
+    unreadCount: "You have {count} unread notifications",
+    allRead: "All notifications have been read",
+    reasonPrefix: "Reason for rejection:",
+    approved: {
+      goToManagement: "Go to Management immediately"
+    },
+    empty: {
+      title: "No notifications",
+      description: "You will receive notifications when the admin approves or rejects your request"
+    }
   },
 };
 

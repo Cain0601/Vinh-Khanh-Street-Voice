@@ -78,6 +78,24 @@ const th = {
     placeholderConfirmPassword: "กรอกรหัสผ่านใหม่อีกครั้ง",
     saveInfo: "บันทึกข้อมูล",
     changePassword: "เปลี่ยนรหัสผ่าน",
+    ownerRegister: {
+      title: "เป็นเจ้าของร้านอาหาร",
+      subtitle: "ส่งคำขอของคุณไปยังผู้ดูแลระบบเพื่อขอสิทธิ์เจ้าของร้านอาหาร",
+      
+      fullNamePlaceholder: "ชื่อผู้แทน",
+      phoneNumber: "หมายเลขโทรศัพท์",
+      phonePlaceholder: "+84...",
+      brandName: "ชื่อแบรนด์/ร้าน",
+      brandPlaceholder: "ตัวอย่าง: Phượng Street Food",
+      
+      info: "ผู้ดูแลระบบจะตรวจสอบคำขอนี้ก่อนที่จะให้สิทธิ์เจ้าของร้านอาหาร คุณสามารถกรอกข้อมูลเจ้าของร้านอาหารเพิ่มเติมได้ในภายหลังที่พอร์ทัลเจ้าของร้านอาหาร",
+      
+      button: {
+        submit: "ส่งคำขอ",
+        sending: "กำลังส่ง...",
+        pending: "กำลังรอการอนุมัติ"
+      }
+  }
   },
   poiDetail: {
     intro: "คำแนะนำ",
@@ -113,27 +131,41 @@ const th = {
     closeButton: "ปิด",
   },
   auth: {
-    loginTitle: "Login",
-    registerTitle: "Register",
-    displayNamePlaceholder: "Display Name",
-    emailPlaceholder: "Email",
-    passwordPlaceholder: "Password",
-    loginButton: "Login",
-    registerButton: "Register",
-    or: "Or",
-    googleSignIn: "Continue with Google",
-    noAccount: "No account? Register",
-    haveAccount: "Have an account? Login",
-    loginSuccess: "Login successful",
-    registerSuccess: "Registration successful",
-    displayNameRequired: "Please enter a display name",
-    genericError: "An error occurred, please try again",
+    loginTitle: "เข้าสู่ระบบ",
+    registerTitle: "ลงทะเบียน",
+    displayNamePlaceholder: "ชื่อที่แสดง",
+    emailPlaceholder: "อีเมล",
+    passwordPlaceholder: "รหัสผ่าน",
+    loginButton: "เข้าสู่ระบบ",
+    registerButton: "ลงทะเบียน",
+    or: "หรือ",
+    googleSignIn: "ดำเนินการต่อด้วย Google",
+    noAccount: "ยังไม่มีบัญชี? ลงทะเบียน",
+    haveAccount: "มีบัญชีแล้ว? เข้าสู่ระบบ",
+    loginSuccess: "เข้าสู่ระบบสำเร็จ",
+    registerSuccess: "ลงทะเบียนสำเร็จ",
+    displayNameRequired: "กรุณากรอกชื่อที่แสดง",
+    genericError: "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
   },
   onboarding: {
-    title: "Welcome",
-    gpsPrompt: "Please grant location permission for the best experience.",
-    selectLanguage: "Select Language",
-    continue: "Continue",
+    title: "ยินดีต้อนรับ",
+    gpsPrompt: "กรุณาอนุญาตการเข้าถึงตำแหน่งเพื่อประสบการณ์ที่ดีที่สุด",
+    selectLanguage: "เลือกภาษา",
+    continue: "ดำเนินการต่อ",
+  },
+  notifications: {
+    title: "การแจ้งเตือน",
+    markAllRead: "ทำเครื่องหมายทั้งหมดว่าอ่านแล้ว",
+    unreadCount: "คุณมี {count} การแจ้งเตือนที่ยังไม่ได้อ่าน",
+    allRead: "อ่านการแจ้งเตือนทั้งหมดแล้ว",
+    reasonPrefix: "เหตุผลในการปฏิเสธ:",
+    approved: {
+      goToManagement: "ไปที่หน้าจัดการทันที"
+    },
+    empty: {
+      title: "ไม่มีการแจ้งเตือน",
+      description: "คุณจะได้รับการแจ้งเตือนเมื่อผู้ดูแลระบบอนุมัติหรือปฏิเสธคำขอของคุณ"
+    }
   },
 };
 export default th;

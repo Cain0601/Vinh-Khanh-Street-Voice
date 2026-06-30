@@ -78,6 +78,24 @@ const ru = {
     placeholderConfirmPassword: "Повторите новый пароль",
     saveInfo: "Сохранить информацию",
     changePassword: "Сменить пароль",
+    ownerRegister: {
+      title: "Стать владельцем ресторана",
+      subtitle: "Отправить запрос на обновление аккаунта",
+
+      fullNamePlaceholder: "Имя представителя",
+      phoneNumber: "Номер телефона",
+      phonePlaceholder: "+84...",
+      brandName: "Название торговой марки/ресторана",
+      brandPlaceholder: "Пример: Phượng Street Food",
+
+      info: "Администратор проверит эту заявку перед предоставлением прав владельца. Вы можете дополнить информацию о владельце позже в портале владельца.",
+
+      button: {
+        submit: "Отправить запрос",
+        sending: "Отправка...",
+        pending: "Ожидание одобрения"
+      }
+    }
   },
   poiDetail: {
     intro: "Введение",
@@ -113,27 +131,41 @@ const ru = {
     closeButton: "Закрыть",
   },
   auth: {
-    loginTitle: "Login",
-    registerTitle: "Register",
-    displayNamePlaceholder: "Display Name",
+    loginTitle: "Войти",
+    registerTitle: "Регистрация",
+    displayNamePlaceholder: "Отображаемое имя",
     emailPlaceholder: "Email",
-    passwordPlaceholder: "Password",
-    loginButton: "Login",
-    registerButton: "Register",
-    or: "Or",
-    googleSignIn: "Continue with Google",
-    noAccount: "No account? Register",
-    haveAccount: "Have an account? Login",
-    loginSuccess: "Login successful",
-    registerSuccess: "Registration successful",
-    displayNameRequired: "Please enter a display name",
-    genericError: "An error occurred, please try again",
+    passwordPlaceholder: "Пароль",
+    loginButton: "Войти",
+    registerButton: "Зарегистрироваться",
+    or: "Или",
+    googleSignIn: "Продолжить с Google",
+    noAccount: "Нет аккаунта? Зарегистрироваться",
+    haveAccount: "Уже есть аккаунт? Войти",
+    loginSuccess: "Вход выполнен успешно",
+    registerSuccess: "Регистрация прошла успешно",
+    displayNameRequired: "Пожалуйста, введите отображаемое имя",
+    genericError: "Произошла ошибка, попробуйте ещё раз",
   },
   onboarding: {
-    title: "Welcome",
-    gpsPrompt: "Please grant location permission for the best experience.",
-    selectLanguage: "Select Language",
-    continue: "Continue",
+    title: "Добро пожаловать",
+    gpsPrompt: "Пожалуйста, предоставьте доступ к местоположению для лучшего опыта.",
+    selectLanguage: "Выбрать язык",
+    continue: "Продолжить",
+  },
+  notifications: {
+    title: "Уведомления",
+    markAllRead: "Отметить все как прочитанные",
+    unreadCount: "У вас {count} непрочитанных уведомлений",
+    allRead: "Все уведомления прочитаны",
+    reasonPrefix: "Причина отказа:",
+    approved: {
+      goToManagement: "Перейти в управление сейчас"
+    },
+    empty: {
+      title: "Нет уведомлений",
+      description: "Вы получите уведомления, когда администратор одобрит или отклонит ваш запрос"
+    }
   },
 };
 export default ru;

@@ -78,6 +78,24 @@ const ar = {
     placeholderConfirmPassword: "أعد إدخال كلمة المرور الجديدة",
     saveInfo: "حفظ المعلومات",
     changePassword: "تغيير كلمة المرور",
+    ownerRegister: {
+      title: "كن صاحب مطعم",
+      subtitle: "إرسال طلبك إلى المسؤول للحصول على امتيازات صاحب مطعم",
+      
+      fullNamePlaceholder: "الاسم الكامل",
+      phoneNumber: "رقم الهاتف",
+      phonePlaceholder: "+84...",
+      brandName: "اسم العلامة التجارية/المطعم",
+      brandPlaceholder: "مثال: Phượng Street Food",
+      
+      info: "سيقوم المسؤول بمراجعة هذا الطلب قبل منح امتيازات صاحب المطعم. يمكنك إكمال معلومات صاحب المطعم الإضافية لاحقًا في بوابة صاحب المطعم.",
+      
+      button: {
+        submit: "إرسال الطلب",
+        sending: "جاري الإرسال...",
+        pending: "جاري الانتظار للموافقة"
+      }
+    }
   },
   poiDetail: {
     intro: "مقدمة",
@@ -134,6 +152,20 @@ const ar = {
     gpsPrompt: "Please grant location permission for the best experience.",
     selectLanguage: "Select Language",
     continue: "Continue",
+  },
+  notifications: {
+    title: "الإشعارات",
+    markAllRead: "وضع علامة مقروءة على الكل",
+    unreadCount: "{{count}} إشعار غير مقروء",
+    allRead: "جميع الإشعارات مقروءة",
+    reasonPrefix: "سبب:",
+    approved: {
+      goToManagement: "اذهب إلى لوحة الإدارة",
+    },
+    empty: {
+      title: "لا توجد إشعارات",
+      description: "ستتلقى إشعارات عندما يوافق الإدارة أو يرفض طلبك"
+    }
   },
 };
 export default ar;

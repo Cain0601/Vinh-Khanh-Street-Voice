@@ -19,7 +19,8 @@ namespace FoodTour.Api.Middleware
             "/openapi",
             "/weatherforecast",
             "/api/pois",        // Public read for POIs
-            "/api/categories"   // Public read for categories
+            "/api/categories",  // Public read for categories
+            "/hubs/location"    // Location hub supports anonymous guests
         };
 
         // Paths that always require auth — checked BEFORE PublicPaths
@@ -47,6 +48,8 @@ namespace FoodTour.Api.Middleware
         {
             var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
             var method = context.Request.Method;
+            var isLocationHub = path.StartsWith("/hubs/location");
+            var authToken = GetAuthToken(context);
 
             // // Development shortcut: allow bypassing Firebase auth for local testing.
             // // Send header `X-Dev-Bypass: owner` to impersonate an OWNER during development only.
@@ -66,6 +69,21 @@ namespace FoodTour.Api.Middleware
             //     }
             // }
 
+            // Location hub is public, but it can optionally carry an auth token or a guest id.
+            if (isLocationHub)
+            {
+                if (!string.IsNullOrWhiteSpace(authToken))
+                {
+                    await ApplyAuthenticatedContextAsync(context, authToken);
+                    return;
+                }
+
+                context.Items["UserId"] = GetGuestId(context);
+                context.Items["UserRole"] = "GUEST";
+                await _next(context);
+                return;
+            }
+
             // Allow public GET endpoints without auth
             if (IsPublicEndpoint(path, method))
             {
@@ -80,38 +98,49 @@ namespace FoodTour.Api.Middleware
                 return;
             }
 
-            // Extract Bearer token
-            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
-            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            if (string.IsNullOrWhiteSpace(authToken))
             {
                 await WriteUnauthorized(context, "Missing or invalid authorization header.");
                 return;
             }
+            await ApplyAuthenticatedContextAsync(context, authToken);
+        }
 
-            var token = authHeader.Substring("Bearer ".Length).Trim();
+        private string? GetAuthToken(HttpContext context)
+        {
+            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                return authHeader.Substring("Bearer ".Length).Trim();
 
-            // // If Firebase Admin SDK is not initialized (missing service_account.json),
-            // // fall back to dev-owner in Development; block in Production.
-            // if (FirebaseApp.DefaultInstance == null)
-            // {
-            //     if (isDevEnv)
-            //     {
-            //         _logger.LogWarning("Firebase Admin SDK not initialized — auto-bypassing auth in Development mode.");
-            //         context.Items["UserId"]   = "dev-owner";
-            //         context.Items["UserRole"] = "OWNER";
-            //         context.Items["UserData"] = new Models.User { Id = "dev-owner", Role = "OWNER", IsActive = true, FullName = "Dev Owner (no creds)" };
-            //         await _next(context);
-            //         return;
-            //     }
-            //     await WriteUnauthorized(context, "Authentication service unavailable. Set GOOGLE_APPLICATION_CREDENTIALS on the server.");
-            //     return;
-            // }
+            if (context.Request.Query.TryGetValue("access_token", out var accessToken))
+            {
+                var token = accessToken.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(token))
+                    return token.Trim();
+            }
 
+            return null;
+        }
+
+        private string GetGuestId(HttpContext context)
+        {
+            if (context.Request.Query.TryGetValue("visitorId", out var visitorId))
+            {
+                var id = visitorId.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(id))
+                    return id.Trim();
+            }
+
+            return $"guest-{Guid.NewGuid():N}";
+        }
+
+        private async Task ApplyAuthenticatedContextAsync(HttpContext context, string token)
+        {
             try
             {
                 // Verify Firebase ID token
                 var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
-                
+
                 context.Items["FirebaseUid"] = decodedToken.Uid;
                 context.Items["FirebaseEmail"] = decodedToken.Claims.TryGetValue("email", out var email) ? email?.ToString() : "";
                 context.Items["FirebaseName"] = decodedToken.Claims.TryGetValue("name", out var name) ? name?.ToString() : "";
@@ -138,13 +167,13 @@ namespace FoodTour.Api.Middleware
                             return;
                         }
 
-                        context.Items["UserId"]   = userData.Id;
+                        context.Items["UserId"] = userData.Id;
                         context.Items["UserRole"] = userData.Role;
                         context.Items["UserData"] = userData;
                     }
                     else
                     {
-                        context.Items["UserId"]   = decodedToken.Uid;
+                        context.Items["UserId"] = decodedToken.Uid;
                         context.Items["UserRole"] = "USER";
                     }
                 }
@@ -152,7 +181,7 @@ namespace FoodTour.Api.Middleware
                 {
                     // Firestore unavailable — set uid from Firebase token, allow request through
                     _logger.LogWarning(fsEx, "Firestore lookup failed — using Firebase UID as UserId");
-                    context.Items["UserId"]   = decodedToken.Uid;
+                    context.Items["UserId"] = decodedToken.Uid;
                     context.Items["UserRole"] = "USER";
                 }
 
@@ -160,14 +189,14 @@ namespace FoodTour.Api.Middleware
                 var userRole = context.Items["UserRole"]?.ToString() ?? "USER";
 
                 // Admin routes require ADMIN role
-                if (path.StartsWith("/admin/") && userRole != "ADMIN")
+                if (context.Request.Path.Value?.StartsWith("/admin/") == true && userRole != "ADMIN")
                 {
                     await WriteForbidden(context, "Admin access required.");
                     return;
                 }
 
                 // Owner routes require OWNER or ADMIN role
-                if (path.StartsWith("/owner/") && userRole != "OWNER" && userRole != "ADMIN")
+                if (context.Request.Path.Value?.StartsWith("/owner/") == true && userRole != "OWNER" && userRole != "ADMIN")
                 {
                     await WriteForbidden(context, "Owner access required.");
                     return;

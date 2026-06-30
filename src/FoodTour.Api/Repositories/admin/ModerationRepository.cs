@@ -36,6 +36,23 @@ namespace FoodTour.Api.Repositories
             return request;
         }
 
+        public async Task<ModerationRequest?> GetLatestAsync(string requestedBy, string? type = null, string? status = null)
+        {
+            var list = await GetAllAsync();
+            return list
+                .Where(m => string.Equals(m.RequestedBy, requestedBy, StringComparison.OrdinalIgnoreCase))
+                .Where(m => string.IsNullOrWhiteSpace(type) || string.Equals(m.Type, type, StringComparison.OrdinalIgnoreCase))
+                .Where(m => string.IsNullOrWhiteSpace(status) || string.Equals(m.Status, status, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefault();
+        }
+
+        public async Task<bool> HasPendingAsync(string requestedBy, string type)
+        {
+            var existing = await GetLatestAsync(requestedBy, type, "PENDING");
+            return existing != null;
+        }
+
         public async Task<ModerationRequest> AddAsync(ModerationRequest request)
         {
             var docRef = _db.Collection(CollectionName).Document();

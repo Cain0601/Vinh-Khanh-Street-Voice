@@ -78,6 +78,24 @@ const de = {
     placeholderConfirmPassword: "Neues Passwort erneut eingeben",
     saveInfo: "Informationen speichern",
     changePassword: "Passwort ändern",
+    ownerRegister: {
+      title: "Restaurantbesitzer werden",
+      subtitle: "Senden Sie Ihre Bewerbung an den Administrator zur Überprüfung",
+      
+      fullNamePlaceholder: "Vollständiger Name",
+      phoneNumber: "Telefonnummer",
+      phonePlaceholder: "+84...",
+      brandName: "Brand Name",
+      brandPlaceholder: "e.g., Phượng Street Food",
+      
+      info: "Admin will review this application before granting owner privileges. You can complete additional owner information later in the owner portal.",
+      
+      button: {
+        submit: "Submit Request",
+        sending: "Sending...",
+        pending: "Pending Approval"
+      }
+    }
   },
   poiDetail: {
     intro: "Einführung",
@@ -134,6 +152,20 @@ const de = {
     gpsPrompt: "Please grant location permission for the best experience.",
     selectLanguage: "Select Language",
     continue: "Continue",
+  },
+  notifications: {
+    title: "Ihre Benachrichtigungen",
+    markAllRead: "Alle als gelesen markieren",
+    unreadCount: "Sie haben {count} ungelesene Benachrichtigungen",
+    allRead: "Alle Benachrichtigungen wurden gelesen",
+    reasonPrefix: "Grund für die Ablehnung:",
+    approved: {
+      goToManagement: "Gehe zum Admin-Panel",
+    },
+    empty: {
+      title: "Keine Benachrichtigungen",
+      description: "Sie erhalten Benachrichtigungen, wenn die Admins Ihre Anfrage genehmigen oder ablehnen"
+    }
   },
 };
 export default de;

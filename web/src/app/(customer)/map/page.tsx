@@ -6,6 +6,7 @@ import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signal
 import { useTranslation } from '@/i18n'
 import PoiAudioDrawer from '@/components/Map/PoiAudioDrawer'
 import { usePoiAudioQueue } from '@/hooks/usePoiAudioQueue'
+import { getOrCreateVisitorId } from '@/lib/visitor'
 
 const MapView = dynamic(() => import('@/components/Map/MapView'), {
   ssr: false,
@@ -35,8 +36,10 @@ function MapPageContent() {
       .split('; ')
       .find((row) => row.startsWith('ft_token='))
       ?.split('=')[1]
+    const visitorId = getOrCreateVisitorId()
 
-    const hubUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5190') + '/hubs/location'
+    const baseHubUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5190') + '/hubs/location'
+    const hubUrl = `${baseHubUrl}?visitorId=${encodeURIComponent(visitorId)}`
     const conn = new HubConnectionBuilder()
       .withUrl(hubUrl, { accessTokenFactory: () => token || '' })
       .configureLogging(LogLevel.Information)

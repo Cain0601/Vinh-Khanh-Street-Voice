@@ -32,6 +32,7 @@ export type LiveUser = {
 
 export default function AdminHeatmapPage() {
   const [points, setPoints] = useState<HeatPoint[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<LiveUser[]>([]);
   const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
   const [loading, setLoading] = useState(true);
   const connectionRef = useRef<HubConnection | null>(null);
@@ -69,7 +70,20 @@ export default function AdminHeatmapPage() {
       });
     });
 
+    conn.on("UserConnected", (data: LiveUser) => {
+      setOnlineUsers((prev) => {
+        const existing = prev.findIndex(u => u.userId === data.userId);
+        if (existing >= 0) {
+          const newUsers = [...prev];
+          newUsers[existing] = data;
+          return newUsers;
+        }
+        return [...prev, data];
+      });
+    });
+
     conn.on("UserDisconnected", (userId: string) => {
+      setOnlineUsers((prev) => prev.filter(u => u.userId !== userId));
       setLiveUsers((prev) => prev.filter(u => u.userId !== userId));
     });
 
@@ -115,17 +129,17 @@ export default function AdminHeatmapPage() {
             Mức độ tương tác (lượt xem + nghe + quét QR) theo từng địa điểm
           </p>
         </div>
-        {liveUsers.length > 0 && (
+        {onlineUsers.length > 0 && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            {liveUsers.length} đang trực tuyến
+            {onlineUsers.length} đang trực tuyến
           </div>
         )}
       </div>
 
       {loading ? (
         <div className="h-[60vh] rounded-2xl bg-secondary/50 animate-pulse" />
-      ) : points.length === 0 && liveUsers.length === 0 ? (
+      ) : points.length === 0 && onlineUsers.length === 0 ? (
         <div className="rounded-2xl bg-secondary/50 border border-white/[0.06] p-10 text-center text-sm text-muted-foreground">
           Chưa có dữ liệu tương tác để hiển thị heatmap
         </div>

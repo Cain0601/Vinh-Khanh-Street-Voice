@@ -7,11 +7,12 @@ import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/i18n";
 import { authApi } from "@/lib/api/auth";
-import { moderationApi } from "@/lib/api/moderation";
+import { moderationApi, type ModerationRequest } from "@/lib/api/moderation";
 import { useToast } from "@/components/Toast";
 import AuthButton from "@/components/AuthButton";
 import Header from "@/components/Layout/Header";
 import LanguageSwitcher from "@/components/Common/LanguageSwitcher";
+import Link from "next/link";
 
 export default function SettingsPage() {
   const { user, updateUser } = useUserStore();
@@ -22,6 +23,14 @@ export default function SettingsPage() {
   const [isRequestingUpgrade, setIsRequestingUpgrade] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showOwnerModal, setShowOwnerModal] = useState(false);
+  const [ownerRequest, setOwnerRequest] = useState<ModerationRequest | null>(null);
+  const [ownerForm, setOwnerForm] = useState({
+    fullName: user?.fullName || user?.displayName || "",
+    phoneNumber: user?.phoneNumber || "",
+    avatar: user?.avatar || "",
+    brandName: user?.brandName || "",
+  });
   const [profileForm, setProfileForm] = useState({
     fullName: user?.fullName || user?.displayName || "",
     email: user?.email || "",
@@ -42,14 +51,24 @@ export default function SettingsPage() {
   //   }
   // }, [authReady, router, user]);
 
-  useEffect(() => {
-    if (!user) return;
+  const currentUserId = user?.id;
+  const currentUserRole = user?.role;
 
-    setProfileForm({
-      fullName: user.fullName || user.displayName || "",
-      email: user.email || "",
-    });
-  }, [user]);
+  useEffect(() => {
+    if (!authReady || !currentUserId || currentUserRole !== "USER") return;
+
+    let active = true;
+
+    void (async () => {
+      const res = await moderationApi.getMyUpgradeRequest();
+      if (!active) return;
+      setOwnerRequest(res.success ? res.data || null : null);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, currentUserId, currentUserRole]);
 
   if (!authReady) {
     return (
@@ -68,6 +87,8 @@ export default function SettingsPage() {
   // }
   const displayEmail = user?.email || "Chưa có email";
   const displayRole = user?.role || "USER";
+  const hasPendingOwnerRequest = ownerRequest?.status === "PENDING";
+  const displayName = user?.fullName || user?.displayName || "";
 
   const openEditModal = () => {
     setProfileForm({
@@ -76,6 +97,16 @@ export default function SettingsPage() {
     });
     setPasswordForm({ newPassword: "", confirmPassword: "" });
     setShowEditModal(true);
+  };
+
+  const openOwnerModal = () => {
+    setOwnerForm({
+      fullName: user?.fullName || user?.displayName || "",
+      phoneNumber: user?.phoneNumber || "",
+      avatar: user?.avatar || "",
+      brandName: user?.brandName || "",
+    });
+    setShowOwnerModal(true);
   };
 
   const handleUpdateProfile = async () => {
@@ -135,19 +166,27 @@ export default function SettingsPage() {
   };
 
   const handleRequestOwnerUpgrade = async () => {
-    if (!user || user.role !== 'USER') return;
+    if (!user || user.role !== "USER") return;
+    if (hasPendingOwnerRequest) return;
 
     setIsRequestingUpgrade(true);
     try {
-      const result = await moderationApi.requestUpgrade();
+      const result = await moderationApi.requestUpgrade({
+        ownerFullName: ownerForm.fullName.trim(),
+        ownerPhoneNumber: ownerForm.phoneNumber.trim() || null,
+        ownerAvatar: ownerForm.avatar.trim() || null,
+        ownerBrandName: ownerForm.brandName.trim() || null,
+      });
       if (result.success) {
-        addToast('Yêu cầu nâng cấp lên Owner đã được gửi. Admin sẽ xem xét trong thời gian sớm nhất.', 'success');
+        setOwnerRequest(result.data || null);
+        setShowOwnerModal(false);
+        addToast("Yêu cầu nâng cấp lên Owner đã được gửi. Admin sẽ xem xét trong thời gian sớm nhất.", "success");
       } else {
-        addToast(result.message || 'Không thể gửi yêu cầu nâng cấp', 'error');
+        addToast(result.message || "Không thể gửi yêu cầu nâng cấp", "error");
       }
     } catch (error) {
-      console.error('Failed to request owner upgrade:', error);
-      addToast('Không thể gửi yêu cầu nâng cấp', 'error');
+      console.error("Failed to request owner upgrade:", error);
+      addToast("Không thể gửi yêu cầu nâng cấp", "error");
     } finally {
       setIsRequestingUpgrade(false);
     }
@@ -161,42 +200,42 @@ export default function SettingsPage() {
       <div className="p-4 space-y-8 pb-24 h-[calc(100vh-100px)] overflow-y-auto">
         {/* USER INFO Card */}
         <div className="bg-secondary border border-zinc-800 rounded-3xl p-5">
-          
-            {!user ? (
-              <div className="flex min-w-0 items-center justify-center gap-4">
-                <AuthButton />
-              </div>
-            ) : (
+
+          {!user ? (
+            <div className="flex min-w-0 items-center justify-center gap-4">
+              <AuthButton />
+            </div>
+          ) : (
             <>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
-                  <User className="h-7 w-7" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-semibold text-white">{profileForm.fullName}</p>
-                  <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-zinc-400">
-                    <Mail className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{displayEmail}</span>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+                    <User className="h-7 w-7" />
                   </div>
-                  <span className="mt-3 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                    {displayRole}
-                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-white">{displayName}</p>
+                    <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-zinc-400">
+                      <Mail className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{displayEmail}</span>
+                    </div>
+                    <span className="mt-3 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                      {displayRole}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={openEditModal}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
-                aria-label="Sửa thông tin cá nhân"
-              >
-                <Pencil className="h-5 w-5" />
-              </button>
+                <button
+                  type="button"
+                  onClick={openEditModal}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800 text-zinc-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+                  aria-label="Sửa thông tin cá nhân"
+                >
+                  <Pencil className="h-5 w-5" />
+                </button>
               </div>
             </>
           )}
-          
-          
+
+
         </div>
 
         {/* GENERAL Section */}
@@ -287,13 +326,13 @@ export default function SettingsPage() {
         </div>
 
         {/* PARTNERSHIP Section */}
-        {user?.role === 'USER' && (<div>
+        {user?.role === "USER" && (<div>
           <h3 className="text-zinc-500 text-xs font-semibold uppercase tracking-widest px-2 mb-4">{t.settings.sectionPartnership}</h3>
 
           <div className="space-y-3">
             <button
-              onClick={handleRequestOwnerUpgrade}
-              disabled={isRequestingUpgrade}
+              onClick={openOwnerModal}
+              disabled={hasPendingOwnerRequest}
               className="w-full bg-secondary border border-zinc-800 hover:border-orange-500/50 rounded-3xl p-5 flex items-center justify-between transition-all group active:scale-[0.985]"
             >
               <div className="flex items-center gap-4">
@@ -301,14 +340,73 @@ export default function SettingsPage() {
                   <Store className="w-5 h-5 text-orange-400" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium text-white">{t.settings.becomeOwner}</p>
-                  <p className="text-sm text-zinc-400">{t.settings.becomeOwnerSub}</p>
+                  <p className="font-medium text-white">
+                    {hasPendingOwnerRequest ? "Đã gửi yêu cầu owner" : t.settings.becomeOwner}
+                  </p>
+                  <p className="text-sm text-zinc-400">
+                    {hasPendingOwnerRequest
+                      ? "Admin đang xem xét hồ sơ bạn đã gửi"
+                      : t.settings.becomeOwnerSub}
+                  </p>
                 </div>
               </div>
-              <div className="text-orange-400 text-xl group-hover:translate-x-1 transition-transform">›</div>
+              <div className="text-orange-400 text-xl group-hover:translate-x-1 transition-transform">
+                {hasPendingOwnerRequest ? "•" : "›"}
+              </div>
             </button>
+
+            {hasPendingOwnerRequest && ownerRequest && (
+              <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+                <p className="font-semibold">Yêu cầu đang chờ duyệt</p>
+                <p className="mt-1 text-amber-100/80">
+                  Hồ sơ owner của bạn đã được gửi lên admin. Bạn sẽ có thể gửi lại sau khi yêu cầu hiện tại được xử lý.
+                </p>
+              </div>
+            )}
           </div>
         </div>)}
+
+        {user?.role === "OWNER" && (
+          <div className="mt-4">
+            <Link
+              href="/owner"
+              onClick={(e) => e.stopPropagation()} // Ngăn markRead khi click nút
+              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:brightness-110 hover:shadow-xl active:scale-[0.985]"
+            >
+              <span>Đi đến Quản lý ngay</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        )}
+
+        {user?.role === "ADMIN" && (
+          <div className="mt-4">
+            <Link
+              href="/admin/dashboard"
+              onClick={(e) => e.stopPropagation()} // Ngăn markRead khi click nút
+              className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:brightness-110 hover:shadow-xl active:scale-[0.985]"
+            >
+              <span>Đi đến Admin ngay</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        )}
 
         {user && (<button
           type="button"
@@ -316,7 +414,7 @@ export default function SettingsPage() {
           className={`inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-secondary px-5 py-3 font-semibold text-zinc-300 transition-all hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 w-full mt-6 h-14 text-lg`}
         >
           <LogOut className="h-4 w-4" />
-          Đăng xuất
+          {t.settings.logOut}
         </button>)}
       </div>
 
@@ -405,6 +503,98 @@ export default function SettingsPage() {
                   {t.profile.changePassword}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== OWNER REQUEST MODAL ==================== */}
+      {showOwnerModal && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
+          onClick={() => setShowOwnerModal(false)}
+        >
+          <div
+            className="bg-zinc-900 w-full max-w-md sm:rounded-3xl rounded-t-3xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {t.profile.ownerRegister.title}
+                </h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {t.profile.ownerRegister.subtitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowOwnerModal(false)}
+                className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
+                aria-label="Đóng"
+              >
+                <X className="w-6 h-6 text-zinc-400" />
+              </button>
+            </div>
+
+            <div className="max-h-[75vh] overflow-y-auto p-6 space-y-5">
+              <label className="block space-y-2">
+                <span className="text-sm text-zinc-400">
+                  {t.profile.fullName}
+                </span>
+                <input
+                  value={ownerForm.fullName}
+                  onChange={(event) =>
+                    setOwnerForm((current) => ({ ...current, fullName: event.target.value }))
+                  }
+                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none transition-colors focus:border-orange-500"
+                  placeholder={t.profile.ownerRegister.fullNamePlaceholder}
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm text-zinc-400">
+                  {t.profile.ownerRegister.phoneNumber}
+                </span>
+                <input
+                  value={ownerForm.phoneNumber}
+                  onChange={(event) =>
+                    setOwnerForm((current) => ({ ...current, phoneNumber: event.target.value }))
+                  }
+                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none transition-colors focus:border-orange-500"
+                  placeholder={t.profile.ownerRegister.phonePlaceholder}
+                />
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm text-zinc-400">
+                  {t.profile.ownerRegister.brandName}
+                </span>
+                <input
+                  value={ownerForm.brandName}
+                  onChange={(event) =>
+                    setOwnerForm((current) => ({ ...current, brandName: event.target.value }))
+                  }
+                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none transition-colors focus:border-orange-500"
+                  placeholder={t.profile.ownerRegister.brandPlaceholder}
+                />
+              </label>
+
+              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4 text-sm text-orange-100">
+                {t.profile.ownerRegister.info}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRequestOwnerUpgrade}
+                disabled={isRequestingUpgrade || !ownerForm.fullName.trim() || hasPendingOwnerRequest}
+                className="w-full rounded-2xl bg-orange-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isRequestingUpgrade
+                  ? t.profile.ownerRegister.button.sending
+                  : hasPendingOwnerRequest
+                    ? t.profile.ownerRegister.button.pending
+                    : t.profile.ownerRegister.button.submit}
+              </button>
             </div>
           </div>
         </div>

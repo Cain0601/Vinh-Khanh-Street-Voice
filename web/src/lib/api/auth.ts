@@ -8,6 +8,9 @@ export type AuthUserProfile = {
   role?: string;
   language?: string;
   isOnboarded?: boolean;
+  phoneNumber?: string | null;
+  avatar?: string | null;
+  brandName?: string | null;
 };
 
 export type ProfileUpdate = {

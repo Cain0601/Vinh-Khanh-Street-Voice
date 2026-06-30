@@ -14,8 +14,13 @@ namespace FoodTour.Api.Hubs
         public override async Task OnConnectedAsync()
         {
             var httpContext = Context.GetHttpContext();
-            var userRole = httpContext?.Items["UserRole"]?.ToString() ?? "USER";
+            var userRole = httpContext?.Items["UserRole"]?.ToString() ?? "GUEST";
+            var userId = httpContext?.Items["UserId"]?.ToString() ?? Context.ConnectionId;
+            var fullName = httpContext?.Items["UserData"] is Models.User userData
+                ? userData.FullName
+                : userRole == "GUEST" ? "Khách" : "Anonymous";
 
+            Console.WriteLine($"User connected to LocationHub: {Context.ConnectionId}, Role: {userRole}");
             if (userRole == "ADMIN" || userRole == "OWNER")
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
@@ -25,6 +30,20 @@ namespace FoodTour.Api.Hubs
             {
                 _logger.LogInformation($"User connected to LocationHub: {Context.ConnectionId}");
             }
+
+            if (!string.IsNullOrWhiteSpace(userId) && userRole != "GUEST")
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"Users:{userId}");
+            }
+
+            await Clients.Group("Admins").SendAsync("UserConnected", new
+            {
+                userId = userId,
+                fullName = fullName,
+                role = userRole,
+                isAnonymous = userRole == "GUEST",
+                connectedAt = DateTime.UtcNow
+            });
 
             await base.OnConnectedAsync();
         }

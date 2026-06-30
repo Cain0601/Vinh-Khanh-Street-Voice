@@ -78,6 +78,24 @@ const it = {
     placeholderConfirmPassword: "Reinserisci la nuova password",
     saveInfo: "Salva informazioni",
     changePassword: "Cambia password",
+    ownerRegister: {
+      title: "Diventa proprietario di un ristorante",
+      subtitle: "Invia richiesta di upgrade account",
+
+      fullNamePlaceholder: "Nome completo",
+      phoneNumber: "Numero di telefono",
+      phonePlaceholder: "+84...",
+      brandName: "Nome del marchio",
+      brandPlaceholder: "Esempio: Phượng Street Food",
+
+      info: "L'amministratore esaminerà questa richiesta prima di concedere i diritti di proprietario. Puoi completare ulteriori informazioni sul proprietario in un secondo momento nel portale del proprietario.",
+
+      button: {
+        submit: "Invia richiesta",
+        sending: "Invio in corso...",
+        pending: "In attesa di approvazione"
+      }
+    }
   },
   poiDetail: {
     intro: "Introduzione",
@@ -111,29 +129,42 @@ const it = {
     noQrFound: "Nessun codice QR trovato. Per favore riprova.",
     chooseFromGallery: "Scegli dalla galleria",
     closeButton: "Chiudi",
-  },
-  auth: {
-    loginTitle: "Login",
-    registerTitle: "Register",
-    displayNamePlaceholder: "Display Name",
+  },auth: {
+    loginTitle: "Accedi",
+    registerTitle: "Registrati",
+    displayNamePlaceholder: "Nome visualizzato",
     emailPlaceholder: "Email",
     passwordPlaceholder: "Password",
-    loginButton: "Login",
-    registerButton: "Register",
-    or: "Or",
-    googleSignIn: "Continue with Google",
-    noAccount: "No account? Register",
-    haveAccount: "Have an account? Login",
-    loginSuccess: "Login successful",
-    registerSuccess: "Registration successful",
-    displayNameRequired: "Please enter a display name",
-    genericError: "An error occurred, please try again",
+    loginButton: "Accedi",
+    registerButton: "Registrati",
+    or: "O",
+    googleSignIn: "Continua con Google",
+    noAccount: "Non hai un account? Registrati",
+    haveAccount: "Hai già un account? Accedi",
+    loginSuccess: "Accesso riuscito",
+    registerSuccess: "Registrazione riuscita",
+    displayNameRequired: "Inserisci un nome visualizzato",
+    genericError: "Si è verificato un errore, riprova",
   },
   onboarding: {
-    title: "Welcome",
-    gpsPrompt: "Please grant location permission for the best experience.",
-    selectLanguage: "Select Language",
-    continue: "Continue",
+    title: "Benvenuto",
+    gpsPrompt: "Concedi l'autorizzazione alla posizione per la migliore esperienza.",
+    selectLanguage: "Seleziona lingua",
+    continue: "Continua",
+  },
+  notifications: {
+    title: "Notifiche",
+    markAllRead: "Segna tutte come lette",
+    unreadCount: "Hai {count} notifiche non lette",
+    allRead: "Tutte le notifiche sono state lette",
+    reasonPrefix: "Motivo del rifiuto:",
+    approved: {
+      goToManagement: "Vai alla Gestione subito"
+    },
+    empty: {
+      title: "Nessuna notifica",
+      description: "Riceverai notifiche quando l'amministratore approva o rifiuta la tua richiesta"
+    }
   },
 };
 export default it;

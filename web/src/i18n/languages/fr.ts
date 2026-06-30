@@ -78,6 +78,24 @@ const fr = {
     placeholderConfirmPassword: "Réentrez le nouveau mot de passe",
     saveInfo: "Enregistrer les informations",
     changePassword: "Changer le mot de passe",
+    ownerRegister: {
+      title: "Devenir propriétaire de restaurant",
+      subtitle: "Soumettre une demande de mise à niveau du compte",
+
+      fullNamePlaceholder: "Nom complet",
+      phoneNumber: "Numéro de téléphone",
+      phonePlaceholder: "+84...",
+      brandName: "Nom de la marque/restaurante",
+      brandPlaceholder: "Exemple: Phượng Street Food",
+      
+      info: "L'administrateur examinera cette demande avant d'accorder les privilèges de propriétaire. Vous pouvez compléter les informations de propriétaire supplémentaires plus tard dans le portail du propriétaire.",
+      
+      button: {
+        submit: "Soumettre la demande",
+        sending: "Envoi en cours...",
+        pending: "En attente d'approbation"
+      }
+    }
   },
   poiDetail: {
     intro: "Introduction",
@@ -134,6 +152,20 @@ const fr = {
     gpsPrompt: "Please grant location permission for the best experience.",
     selectLanguage: "Select Language",
     continue: "Continue",
+  },
+  notifications: {
+    title: "Vos notifications",
+    markAllRead: "Tout marquer comme lu",
+    unreadCount: "Vous avez {count} notifications non lues",
+    allRead: "Toutes les notifications ont été lues",
+    reasonPrefix: "Raison du refus:",
+    approved: {
+      goToManagement: "Aller à la gestion immédiatement"
+    },
+    empty: {
+      title: "Aucune notification",
+      description: "Vous recevrez des notifications lorsque l'administrateur approuvera ou rejetera votre demande"
+    }
   },
 };
 export default fr;

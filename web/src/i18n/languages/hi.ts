@@ -78,6 +78,24 @@ const hi = {
     placeholderConfirmPassword: "नया पासवर्ड दोबारा दर्ज करें",
     saveInfo: "जानकारी सहेजें",
     changePassword: "पासवर्ड बदलें",
+    ownerRegister: {
+      title: "रेस्तरां मालिक बनें",
+      subtitle: "खाता अपग्रेड करने का अनुरोध सबमिट करें",
+      
+      fullNamePlaceholder: "पूरा नाम",
+      phoneNumber: "फ़ोन नंबर",
+      phonePlaceholder: "+84...",
+      brandName: "ब्रांड का नाम",
+      brandPlaceholder: "उदाहरण: Phượng Street Food",
+      
+      info: "एडमिन इस आवेदन की समीक्षा करेगा और मालिक के विशेषाधिकार प्रदान करने से पहले। आप बाद में मालिक पोर्टल में अतिरिक्त मालिक जानकारी पूरी कर सकते हैं।",
+      
+      button: {
+        submit: "अनुरोध भेजें",
+        sending: "भेजा जा रहा है...",
+        pending: "मंजूरी के लिए अपेक्षा कर रहा है"
+      }
+    }
   },
   poiDetail: {
     intro: "परिचय",
@@ -134,6 +152,20 @@ const hi = {
     gpsPrompt: "Please grant location permission for the best experience.",
     selectLanguage: "Select Language",
     continue: "Continue",
+  },
+  notifications: {
+    title: "सूचनाएं",
+    markAllRead: "सभी को पढ़ा हुआ चिह्नित करें",
+    unreadCount: "आपके पास {count} अपठित सूचनाएं हैं",
+    allRead: "सभी सूचनाएं पढ़ी गई हैं",
+    reasonPrefix: "अस्वीकरण का कारण:",
+    approved: {
+      goToManagement: "प्रबंधन पर जाएं"
+    },
+    empty: {
+      title: "कोई सूचना नहीं",
+      description: "जब व्यवस्थापक आपके अनुरोध को स्वीकार या अस्वीकार करेगा तो आप सूचनाएं प्राप्त करेंगे"
+    }
   },
 };
 export default hi;
